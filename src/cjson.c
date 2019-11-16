@@ -47,14 +47,7 @@
 #include "cjson.h"
 
 /* define our own boolean type */
-#ifdef true
-#undef true
-#endif
 #define true ((cJSON_bool)1)
-
-#ifdef false
-#undef false
-#endif
 #define false ((cJSON_bool)0)
 
 typedef struct {
@@ -374,12 +367,12 @@ static unsigned char* ensure(printbuffer * const p, size_t needed)
     }
 
     /* calculate new buffer size */
-    if (needed > (SIZE_MAX / 2))
+    if (needed > (LLONG_MAX / 2))
     {
-        /* overflow of int, use SIZE_MAX if possible */
-        if (needed <= SIZE_MAX)
+        /* overflow of int, use LLONG_MAX if possible */
+        if (needed <= LLONG_MAX)
         {
-            newsize = SIZE_MAX;
+            newsize = LLONG_MAX;
         }
         else
         {

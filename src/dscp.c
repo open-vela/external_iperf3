@@ -27,7 +27,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <strings.h>
 #include <stdlib.h>
 #include <inttypes.h>
 
@@ -43,10 +42,10 @@ const char * iptos2str(int iptos);
  * Definitions for IP type of service (ip_tos)
  */
 
-#ifdef HAVE_NETINET_IN_SYSTM_H
+#if HAVE_NETINET_IN_SYSTM_H
 #include <netinet/in_systm.h>
 #endif
-#ifdef HAVE_NETINET_IP_H
+#if HAVE_NETINET_IP_H
 #include <netinet/ip.h>
 #endif
 

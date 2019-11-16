@@ -769,7 +769,7 @@ iperf_on_connect(struct iperf_test *test)
             }
         }
         if (test->settings->rate)
-            iperf_printf(test, "      Target Bitrate: %" SCNu64 "\n", test->settings->rate);
+            iperf_printf(test, "      Target Bitrate: %llu\n", test->settings->rate);
     }
 }
 
@@ -3681,7 +3681,7 @@ iperf_new_stream(struct iperf_test *test, int s, int sender)
         free(sp);
         return NULL;
     }
-    sp->buffer = (char *) mmap(NULL, test->settings->blksize, PROT_READ|PROT_WRITE, MAP_SHARED, sp->buffer_fd, 0);
+    sp->buffer = (char *) mmap(NULL, test->settings->blksize, PROT_READ|PROT_WRITE, MAP_PRIVATE, sp->buffer_fd, 0);
     if (sp->buffer == MAP_FAILED) {
         i_errno = IECREATESTREAM;
         free(sp->result);
@@ -3862,15 +3862,9 @@ diskfile_recv(struct iperf_stream *sp)
 void
 iperf_catch_sigend(void (*handler)(int))
 {
-#ifdef SIGINT
     signal(SIGINT, handler);
-#endif
-#ifdef SIGTERM
     signal(SIGTERM, handler);
-#endif
-#ifdef SIGHUP
     signal(SIGHUP, handler);
-#endif
 }
 
 /**
