@@ -3637,7 +3637,7 @@ iperf_new_stream(struct iperf_test *test, int s, int sender)
         if (tempdir == 0){
             tempdir = "/tmp";
         }
-        snprintf(template, sizeof(template) / sizeof(char), "%s/iperf3.XXXXXX", tempdir);
+        snprintf(template, sizeof(template) / sizeof(char), "%s/iperf3.XXX", tempdir);
     }
 
     sp = (struct iperf_stream *) malloc(sizeof(struct iperf_stream));
