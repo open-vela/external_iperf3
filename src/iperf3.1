@@ -1,4 +1,4 @@
-.TH IPERF3 1 "July 2020" ESnet "User Manuals"
+.TH IPERF3 1 "June 2018" ESnet "User Manuals"
 .SH NAME
 iperf3 \- perform network throughput tests
 .SH SYNOPSIS
@@ -177,15 +177,6 @@ write a file with the process ID, most useful when running as a daemon.
 .BR -1 ", " --one-off
 handle one client connection, then exit.
 .TP
-.BR --server-bitrate-limit " \fIn\fR[KMGT]"
-set a limit on the server side, which will cause a test to abort if
-the client specifies a test of more than \fIn\fR bits per second, or
-if the average data sent or received by the client (including all data
-streams) is greater than \fIn\fR bits per second.  The default limit
-is zero, which implies no limit.  The interval over which to average
-the data rate is 5 seconds by default, but can be specified by adding
-a '/' and a number to the bitrate specifier.
-.TP
 .BR --rsa-private-key-path " \fIfile\fR"
 path to the RSA private key (not password-protected) used to decrypt 
 authentication credentials from the client (if built with OpenSSL
@@ -218,7 +209,7 @@ connection establishment.
 Providing a shorter value may speed up detection of a down iperf3
 server.
 .TP
-.BR -b ", " --bitrate " \fIn\fR[KMGT]"
+.BR -b ", " --bitrate " \fIn\fR[KM]"
 set target bitrate to \fIn\fR bits/sec (default 1 Mbit/sec for UDP,
 unlimited for TCP/SCTP).
 If there are multiple streams (\-P flag), the throughput limit is applied
@@ -235,7 +226,7 @@ Compare with the \--fq-rate flag.
 This option replaces the \--bandwidth flag, which is now deprecated
 but (at least for now) still accepted.
 .TP
-.BR --pacing-timer " \fIn\fR[KMGT]"
+.BR --pacing-timer " \fIn\fR[KMG]"
 set pacing timer interval in microseconds (default 1000 microseconds,
 or 1 ms).
 This controls iperf3's internal pacing timer for the \-b/\--bitrate
@@ -245,7 +236,7 @@ Smaller values of the pacing timer parameter smooth out the traffic
 emitted by iperf3, but potentially at the cost of performance due to
 more frequent timer processing.
 .TP
-.BR --fq-rate " \fIn\fR[KMGT]"
+.BR --fq-rate " \fIn\fR[KM]"
 Set a rate to be used with fair-queueing based socket-level pacing,
 in bits per second.
 This pacing (if specified) will be in addition to any pacing due to
@@ -262,13 +253,13 @@ It is equivalent to specifying --fq-rate=0.
 .BR -t ", " --time " \fIn\fR"
 time in seconds to transmit for (default 10 secs)
 .TP
-.BR -n ", " --bytes " \fIn\fR[KMGT]"
+.BR -n ", " --bytes " \fIn\fR[KM]"
 number of bytes to transmit (instead of \-t)
 .TP
-.BR -k ", " --blockcount " \fIn\fR[KMGT]"
+.BR -k ", " --blockcount " \fIn\fR[KM]"
 number of blocks (packets) to transmit (instead of \-t or \-n)
 .TP
-.BR -l ", " --length " \fIn\fR[KMGT]"
+.BR -l ", " --length " \fIn\fR[KM]"
 length of buffer to read or write.  For TCP tests, the default value
 is 128KB.
 In the case of UDP, iperf3 tries to dynamically determine a reasonable
@@ -291,7 +282,7 @@ client
 test in both directions (normal and reverse), with both the client and
 server sending and receiving data simultaneously
 .TP
-.BR -w ", " --window " \fIn\fR[KMGT]"
+.BR -w ", " --window " \fIn\fR[KM]"
 window size / socket buffer size (this gets sent to the server and used on that side too)
 .TP
 .BR -M ", " --set-mss " \fIn\fR"

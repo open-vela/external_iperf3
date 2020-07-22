@@ -1,121 +1,122 @@
+/* src/iperf_config.h.  Generated from iperf_config.h.in by configure.  */
 /* src/iperf_config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the `clock_gettime' function. */
-#undef HAVE_CLOCK_GETTIME
+#define HAVE_CLOCK_GETTIME 1
 
 /* Define to 1 if you have the `cpuset_setaffinity' function. */
-#undef HAVE_CPUSET_SETAFFINITY
+/* #undef HAVE_CPUSET_SETAFFINITY */
 
 /* Have CPU affinity support. */
-#undef HAVE_CPU_AFFINITY
+/* #undef HAVE_CPU_AFFINITY */
 
 /* Define to 1 if you have the `daemon' function. */
-#undef HAVE_DAEMON
+#define HAVE_DAEMON 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
-#undef HAVE_DLFCN_H
+#define HAVE_DLFCN_H 1
 
 /* Define to 1 if you have the <endian.h> header file. */
-#undef HAVE_ENDIAN_H
+#define HAVE_ENDIAN_H 1
 
 /* Have IPv6 flowlabel support. */
-#undef HAVE_FLOWLABEL
+/* #undef HAVE_FLOWLABEL */
 
 /* Define to 1 if you have the `getline' function. */
-#undef HAVE_GETLINE
+#define HAVE_GETLINE 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
-#undef HAVE_INTTYPES_H
+#define HAVE_INTTYPES_H 1
 
 /* Define to 1 if you have the <memory.h> header file. */
-#undef HAVE_MEMORY_H
+#define HAVE_MEMORY_H 1
 
 /* Define to 1 if you have the <netinet/sctp.h> header file. */
-#undef HAVE_NETINET_SCTP_H
+/* #undef HAVE_NETINET_SCTP_H */
 
 /* Define to 1 if you have the <poll.h> header file. */
-#undef HAVE_POLL_H
+#define HAVE_POLL_H 1
 
 /* Define to 1 if you have the `sched_setaffinity' function. */
-#undef HAVE_SCHED_SETAFFINITY
+/* #undef HAVE_SCHED_SETAFFINITY */
 
 /* Have SCTP support. */
-#undef HAVE_SCTP
+/* #undef HAVE_SCTP */
 
 /* Define to 1 if you have the `sendfile' function. */
-#undef HAVE_SENDFILE
+#define HAVE_SENDFILE 1
 
 /* Define to 1 if you have the `SetProcessAffinityMask' function. */
-#undef HAVE_SETPROCESSAFFINITYMASK
+/* #undef HAVE_SETPROCESSAFFINITYMASK */
 
 /* Have SO_MAX_PACING_RATE sockopt. */
-#undef HAVE_SO_MAX_PACING_RATE
+/* #undef HAVE_SO_MAX_PACING_RATE */
 
 /* OpenSSL Is Available */
-#undef HAVE_SSL
+/* #undef HAVE_SSL */
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#undef HAVE_STDINT_H
+#define HAVE_STDINT_H 1
 
 /* Define to 1 if you have the <stdlib.h> header file. */
-#undef HAVE_STDLIB_H
+#define HAVE_STDLIB_H 1
 
 /* Define to 1 if you have the <strings.h> header file. */
-#undef HAVE_STRINGS_H
+#define HAVE_STRINGS_H 1
 
 /* Define to 1 if you have the <string.h> header file. */
-#undef HAVE_STRING_H
+#define HAVE_STRING_H 1
 
 /* Define to 1 if the system has the type `struct sctp_assoc_value'. */
-#undef HAVE_STRUCT_SCTP_ASSOC_VALUE
+/* #undef HAVE_STRUCT_SCTP_ASSOC_VALUE */
 
 /* Define to 1 if you have the <sys/endian.h> header file. */
-#undef HAVE_SYS_ENDIAN_H
+/* #undef HAVE_SYS_ENDIAN_H */
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
-#undef HAVE_SYS_SOCKET_H
+#define HAVE_SYS_SOCKET_H 1
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
-#undef HAVE_SYS_STAT_H
+#define HAVE_SYS_STAT_H 1
 
 /* Define to 1 if you have the <sys/types.h> header file. */
-#undef HAVE_SYS_TYPES_H
+#define HAVE_SYS_TYPES_H 1
 
 /* Have TCP_CONGESTION sockopt. */
-#undef HAVE_TCP_CONGESTION
+/* #undef HAVE_TCP_CONGESTION */
 
 /* Define to 1 if you have the <unistd.h> header file. */
-#undef HAVE_UNISTD_H
+#define HAVE_UNISTD_H 1
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
-#undef LT_OBJDIR
+#define LT_OBJDIR ".libs/"
 
 /* Name of package */
-#undef PACKAGE
+#define PACKAGE "iperf"
 
 /* Define to the address where bug reports for this package should be sent. */
-#undef PACKAGE_BUGREPORT
+#define PACKAGE_BUGREPORT "https://github.com/esnet/iperf"
 
 /* Define to the full name of this package. */
-#undef PACKAGE_NAME
+#define PACKAGE_NAME "iperf"
 
 /* Define to the full name and version of this package. */
-#undef PACKAGE_STRING
+#define PACKAGE_STRING "iperf 3.7+"
 
 /* Define to the one symbol short name of this package. */
-#undef PACKAGE_TARNAME
+#define PACKAGE_TARNAME "iperf"
 
 /* Define to the home page for this package. */
-#undef PACKAGE_URL
+#define PACKAGE_URL "https://software.es.net/iperf/"
 
 /* Define to the version of this package. */
-#undef PACKAGE_VERSION
+#define PACKAGE_VERSION "3.7+"
 
 /* Define to 1 if you have the ANSI C header files. */
-#undef STDC_HEADERS
+#define STDC_HEADERS 1
 
 /* Version number of package */
-#undef VERSION
+#define VERSION "3.7+"
 
 /* Define to empty if `const' does not conform to ANSI C. */
-#undef const
+/* #undef const */
