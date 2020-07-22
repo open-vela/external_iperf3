@@ -63,9 +63,7 @@ How can I build a statically-linked executable of iperf3?
   #.  Configure iperf3 thusly: ``configure "LDFLAGS=--static"
       --disable-shared`` These options are necessary to disable the
       generation of shared libraries and link the executable
-      statically.  For iperf-3.8 or later, configuring as ``configure
-      --enable-static-bin`` is another, shorter way to accomplish
-      this.
+      statically.
 
   #.  Compile as normal.
 
