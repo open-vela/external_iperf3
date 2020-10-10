@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2017, The Regents of the University of
+ * iperf, Copyright (c) 2014, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -24,30 +24,4 @@
  * This code is distributed under a BSD style license, see the LICENSE
  * file for complete information.
  */
-
-
-#include <assert.h>
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-#include <stdio.h>
-#include <string.h>
-
-#include "iperf.h"
-#include "iperf_api.h"
-
-#include "version.h"
-
-#include "units.h"
-
-
-int
-main(int argc, char **argv)
-{
-    const char *ver;
-
-    ver = iperf_get_iperf_version();
-    assert(strcmp(ver, IPERF_VERSION) == 0);
-
-    return 0;
-}
+#define IPERF_VERSION "3.7+"
