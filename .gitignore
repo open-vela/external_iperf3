@@ -5,6 +5,8 @@
 *.o
 *.orig
 *.Po
+.depend
+/Make.dep
 /Makefile
 /autom4te.cache
 /config.log
