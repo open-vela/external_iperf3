@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2020, The Regents of the University of
+ * iperf, Copyright (c) 2014-2018, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -52,13 +52,7 @@
 #if defined(HAVE_INTTYPES_H)
 # include <inttypes.h>
 #else
-# ifndef PRIu64
-#  if sizeof(long) == 8
-#   define PRIu64		"lu"
-#  else
-#   define PRIu64		"llu"
-#  endif
-# endif
+# define PRIu64		"llu"
 #endif
 
 /* iperf_udp_recv
@@ -72,7 +66,6 @@ iperf_udp_recv(struct iperf_stream *sp)
     uint64_t  pcount;
     int       r;
     int       size = sp->settings->blksize;
-    int       first_packet = 0;
     double    transit = 0, d = 0;
     struct iperf_time sent_time, arrival_time, temp_time;
 
@@ -88,19 +81,9 @@ iperf_udp_recv(struct iperf_stream *sp)
 
     /* Only count bytes received while we're in the correct state. */
     if (sp->test->state == TEST_RUNNING) {
-
-	/*
-	 * For jitter computation below, it's important to know if this
-	 * packet is the first packet received.
-	 */
-	if (sp->result->bytes_received == 0) {
-	    first_packet = 1;
-	}
-
 	sp->result->bytes_received += r;
 	sp->result->bytes_received_this_interval += r;
 
-	/* Dig the various counters out of the incoming UDP packet */
 	if (sp->test->udp_counters_64bit) {
 	    memcpy(&sec, sp->buffer, sizeof(sec));
 	    memcpy(&usec, sp->buffer+4, sizeof(usec));
@@ -167,7 +150,7 @@ iperf_udp_recv(struct iperf_stream *sp)
 	
 	    /* Log the out-of-order packet */
 	    if (sp->test->debug) 
-		fprintf(stderr, "OUT OF ORDER - incoming packet sequence %" PRIu64 " but expected sequence %d on stream %d", pcount, sp->packet_count + 1, sp->socket);
+		fprintf(stderr, "OUT OF ORDER - incoming packet sequence %" PRIu64 " but expected sequence %d on stream %d", pcount, sp->packet_count, sp->socket);
 	}
 
 	/*
@@ -185,11 +168,6 @@ iperf_udp_recv(struct iperf_stream *sp)
 
 	iperf_time_diff(&arrival_time, &sent_time, &temp_time);
 	transit = iperf_time_in_secs(&temp_time);
-
-	/* Hack to handle the first packet by initializing prev_transit. */
-	if (first_packet)
-	    sp->prev_transit = transit;
-
 	d = transit - sp->prev_transit;
 	if (d < 0)
 	    d = -d;
@@ -301,50 +279,50 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
             i_errno = IESETBUF;
             return -1;
         }
-    }
 
-    /* Read back and verify the sender socket buffer size */
-    optlen = sizeof(sndbuf_actual);
-    if (getsockopt(s, SOL_SOCKET, SO_SNDBUF, &sndbuf_actual, &optlen) < 0) {
-	i_errno = IESETBUF;
-	return -1;
-    }
-    if (test->debug) {
-	printf("SNDBUF is %u, expecting %u\n", sndbuf_actual, test->settings->socket_bufsize);
-    }
-    if (test->settings->socket_bufsize && test->settings->socket_bufsize > sndbuf_actual) {
-	i_errno = IESETBUF2;
-	return -1;
-    }
-    if (test->settings->blksize > sndbuf_actual) {
-	char str[80];
-	snprintf(str, sizeof(str),
-		 "Block size %d > sending socket buffer size %d",
-		 test->settings->blksize, sndbuf_actual);
-	warning(str);
-	rc = 1;
-    }
+        /* Read back and verify the sender socket buffer size */
+        optlen = sizeof(sndbuf_actual);
+        if (getsockopt(s, SOL_SOCKET, SO_SNDBUF, &sndbuf_actual, &optlen) < 0) {
+            i_errno = IESETBUF;
+            return -1;
+        }
+        if (test->debug) {
+            printf("SNDBUF is %u, expecting %u\n", sndbuf_actual, test->settings->socket_bufsize);
+        }
+        if (test->settings->socket_bufsize > sndbuf_actual) {
+            i_errno = IESETBUF2;
+            return -1;
+        }
+        if (test->settings->blksize > sndbuf_actual) {
+            char str[80];
+            snprintf(str, sizeof(str),
+                     "Block size %d > sending socket buffer size %d",
+                     test->settings->blksize, sndbuf_actual);
+            warning(str);
+            rc = 1;
+        }
 
-    /* Read back and verify the receiver socket buffer size */
-    optlen = sizeof(rcvbuf_actual);
-    if (getsockopt(s, SOL_SOCKET, SO_RCVBUF, &rcvbuf_actual, &optlen) < 0) {
-	i_errno = IESETBUF;
-	return -1;
-    }
-    if (test->debug) {
-	printf("RCVBUF is %u, expecting %u\n", rcvbuf_actual, test->settings->socket_bufsize);
-    }
-    if (test->settings->socket_bufsize && test->settings->socket_bufsize > rcvbuf_actual) {
-	i_errno = IESETBUF2;
-	return -1;
-    }
-    if (test->settings->blksize > rcvbuf_actual) {
-	char str[80];
-	snprintf(str, sizeof(str),
-		 "Block size %d > receiving socket buffer size %d",
-		 test->settings->blksize, rcvbuf_actual);
-	warning(str);
-	rc = 1;
+        /* Read back and verify the receiver socket buffer size */
+        optlen = sizeof(rcvbuf_actual);
+        if (getsockopt(s, SOL_SOCKET, SO_RCVBUF, &rcvbuf_actual, &optlen) < 0) {
+            i_errno = IESETBUF;
+            return -1;
+        }
+        if (test->debug) {
+            printf("RCVBUF is %u, expecting %u\n", rcvbuf_actual, test->settings->socket_bufsize);
+        }
+        if (test->settings->socket_bufsize > rcvbuf_actual) {
+            i_errno = IESETBUF2;
+            return -1;
+        }
+        if (test->settings->blksize > rcvbuf_actual) {
+            char str[80];
+            snprintf(str, sizeof(str),
+                     "Block size %d > receiving socket buffer size %d",
+                     test->settings->blksize, rcvbuf_actual);
+            warning(str);
+            rc = 1;
+        }
     }
 
     if (test->json_output) {
@@ -440,7 +418,7 @@ iperf_udp_accept(struct iperf_test *test)
     /*
      * Create a new "listening" socket to replace the one we were using before.
      */
-    test->prot_listener = netannounce(test->settings->domain, Pudp, test->bind_address, test->bind_dev, test->server_port);
+    test->prot_listener = netannounce(test->settings->domain, Pudp, test->bind_address, test->server_port);
     if (test->prot_listener < 0) {
         i_errno = IESTREAMLISTEN;
         return -1;
@@ -472,7 +450,7 @@ iperf_udp_listen(struct iperf_test *test)
 {
     int s;
 
-    if ((s = netannounce(test->settings->domain, Pudp, test->bind_address, test->bind_dev, test->server_port)) < 0) {
+    if ((s = netannounce(test->settings->domain, Pudp, test->bind_address, test->server_port)) < 0) {
         i_errno = IESTREAMLISTEN;
         return -1;
     }
@@ -499,7 +477,7 @@ iperf_udp_connect(struct iperf_test *test)
     int rc;
 
     /* Create and bind our local socket. */
-    if ((s = netdial(test->settings->domain, Pudp, test->bind_address, test->bind_dev, test->bind_port, test->server_hostname, test->server_port, -1)) < 0) {
+    if ((s = netdial(test->settings->domain, Pudp, test->bind_address, test->bind_port, test->server_hostname, test->server_port, -1)) < 0) {
         i_errno = IESTREAMCONNECT;
         return -1;
     }
