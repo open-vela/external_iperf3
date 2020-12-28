@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2020, The Regents of the University of
+ * iperf, Copyright (c) 2014-2019, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -40,7 +40,6 @@
 # define _GNU_SOURCE
 #endif
 #include <netinet/tcp.h>
-#include <net/if.h> // for IFNAMSIZ
 
 #if defined(HAVE_CPUSET_SETAFFINITY)
 #include <sys/param.h>
@@ -69,9 +68,7 @@
 #include <openssl/evp.h>
 #endif // HAVE_SSL
 
-#if !defined(__IPERF_API_H)
 typedef uint64_t iperf_size_t;
-#endif // __IPERF_API_H
 
 struct iperf_interval_results
 {
@@ -138,10 +135,7 @@ struct iperf_settings
     int       domain;               /* AF_INET or AF_INET6 */
     int       socket_bufsize;       /* window size for TCP */
     int       blksize;              /* size of read/writes (-l) */
-    iperf_size_t  rate;                 /* target data rate for application pacing*/
-    iperf_size_t  bitrate_limit;   /* server's maximum allowed total data rate for all streams*/
-    double        bitrate_limit_interval;  /* interval for avaraging total data rate */
-    int           bitrate_limit_stats_per_interval;     /* calculated number of stats periods for averaging total data rate */
+    uint64_t  rate;                 /* target data rate for application pacing*/
     uint64_t  fqrate;               /* target data rate for FQ pacing*/
     int	      pacing_timer;	    /* pacing timer in microseconds */
     int       burst;                /* packets per burst */
@@ -184,7 +178,6 @@ struct iperf_stream
     int       green_light;
     int       buffer_fd;	/* data to send, file descriptor */
     char      *buffer;		/* data to send, mmapped */
-    int       pending_size;     /* pending data to send */
     int       diskfile_fd;	/* file to send, file descriptor */
     int	      diskfile_left;	/* remaining file data on disk */
 
@@ -259,7 +252,6 @@ struct iperf_test
     char     *server_hostname;                  /* -c option */
     char     *tmp_template;
     char     *bind_address;                     /* first -B option */
-    char     *bind_dev;                         /* bind to network device */
     TAILQ_HEAD(xbind_addrhead, xbind_entry) xbind_addrs; /* all -X opts */
     int       bind_port;                        /* --cport option */
     int       server_port;
@@ -289,7 +281,6 @@ struct iperf_test
 #if defined(HAVE_SSL)
     char      *server_authorized_users;
     EVP_PKEY  *server_rsa_private_key;
-    int       server_skew_threshold;
 #endif // HAVE_SSL
 
     /* boolean variables for Options */
@@ -307,8 +298,6 @@ struct iperf_test
     int       forceflush; /* --forceflush - flushing output at every interval */
     int	      multisend;
     int	      repeating_payload;                /* --repeating-payload */
-    int       timestamps;			/* --timestamps */
-    char     *timestamp_format;
 
     char     *json_output_string; /* rendered JSON output if json_output is set */
     /* Select related parameters */
@@ -338,11 +327,6 @@ struct iperf_test
 
     iperf_size_t bytes_received;
     iperf_size_t blocks_received;
-
-    iperf_size_t bitrate_limit_stats_count;               /* Number of stats periods accumulated for server's total bitrate average */
-    iperf_size_t *bitrate_limit_intervals_traffic_bytes;  /* Pointer to a cyclic array that includes the last interval's bytes transferred */
-    iperf_size_t bitrate_limit_last_interval_index;       /* Index of the last interval traffic insrted into the cyclic array */
-    int          bitrate_limit_exceeded;                  /* Set by callback routine when average data rate exceeded the server's bitrate limit */
 
     char      cookie[COOKIE_SIZE];
 //    struct iperf_stream *streams;               /* pointer to list of struct stream */
@@ -400,8 +384,6 @@ struct iperf_test
 #define MAX_BURST 1000
 #define MAX_MSS (9 * 1024)
 #define MAX_STREAMS 128
-
-#define TIMESTAMP_FORMAT "%c "
 
 extern int gerror; /* error value from getaddrinfo(3), for use in internal error handling */
 
