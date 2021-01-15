@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2018 The Regents of the University of
+ * iperf, Copyright (c) 2014-2021 The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -70,7 +70,7 @@ int
 iperf_server_listen(struct iperf_test *test)
 {
     retry:
-    if((test->listener = netannounce(test->settings->domain, Ptcp, test->bind_address, test->server_port)) < 0) {
+    if((test->listener = netannounce(test->settings->domain, Ptcp, test->bind_address, test->bind_dev, test->server_port)) < 0) {
 	if (errno == EAFNOSUPPORT && (test->settings->domain == AF_INET6 || test->settings->domain == AF_UNSPEC)) {
 	    /* If we get "Address family not supported by protocol", that
 	    ** probably means we were compiled with IPv6 but the running
@@ -119,6 +119,13 @@ iperf_accept(struct iperf_test *test)
     if (test->ctrl_sck == -1) {
         /* Server free, accept new client */
         test->ctrl_sck = s;
+        // set TCP_NODELAY for lower latency on control messages
+        int flag = 1;
+        if (setsockopt(test->ctrl_sck, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int))) {
+            i_errno = IESETNODELAY;
+            return -1;
+        }
+
         if (Nread(test->ctrl_sck, test->cookie, COOKIE_SIZE, Ptcp) < 0) {
             i_errno = IERECVCOOKIE;
             return -1;
@@ -178,6 +185,11 @@ iperf_handle_message_server(struct iperf_test *test)
 	    test->done = 1;
             cpu_util(test->cpu_util);
             test->stats_callback(test);
+            SLIST_FOREACH(sp, &test->streams, streams) {
+                FD_CLR(sp->socket, &test->read_set);
+                FD_CLR(sp->socket, &test->write_set);
+                close(sp->socket);
+            }
             test->reporter_callback(test);
 	    if (iperf_set_send_state(test, EXCHANGE_RESULTS) != 0)
                 return -1;
@@ -187,11 +199,6 @@ iperf_handle_message_server(struct iperf_test *test)
                 return -1;
             if (test->on_test_finish)
                 test->on_test_finish(test);
-            SLIST_FOREACH(sp, &test->streams, streams) {
-                FD_CLR(sp->socket, &test->read_set);
-                FD_CLR(sp->socket, &test->write_set);
-                close(sp->socket);
-            }
             break;
         case IPERF_DONE:
             break;
@@ -354,12 +361,24 @@ create_server_omit_timer(struct iperf_test * test)
 static void
 cleanup_server(struct iperf_test *test)
 {
+    struct iperf_stream *sp;
+
+    /* Close open streams */
+    SLIST_FOREACH(sp, &test->streams, streams) {
+	FD_CLR(sp->socket, &test->read_set);
+	FD_CLR(sp->socket, &test->write_set);
+	close(sp->socket);
+    }
+
     /* Close open test sockets */
     if (test->ctrl_sck) {
 	close(test->ctrl_sck);
     }
     if (test->listener) {
 	close(test->listener);
+    }
+    if (test->prot_listener > -1) {     // May remain open if create socket failed
+	close(test->prot_listener);
     }
 
     /* Cancel any remaining timers. */
@@ -428,21 +447,26 @@ iperf_run_server(struct iperf_test *test)
         return -2;
     }
 
-    // Begin calculating CPU utilization
-    cpu_util(NULL);
-
     test->state = IPERF_START;
     send_streams_accepted = 0;
     rec_streams_accepted = 0;
 
     while (test->state != IPERF_DONE) {
 
+        // Check if average transfer rate was exceeded (condition set in the callback routines)
+	if (test->bitrate_limit_exceeded) {
+	    cleanup_server(test);
+            i_errno = IETOTALRATE;
+            return -1;	
+	}
+
         memcpy(&read_set, &test->read_set, sizeof(fd_set));
         memcpy(&write_set, &test->write_set, sizeof(fd_set));
 
 	iperf_time_now(&now);
 	timeout = tmr_timeout(&now);
-        result = select(test->max_fd + 1, &read_set, test->state == TEST_RUNNING ? &write_set : NULL, NULL, timeout);
+        result = select(test->max_fd + 1, &read_set, &write_set, NULL, timeout);
+
         if (result < 0 && errno != EINTR) {
 	    cleanup_server(test);
             i_errno = IESELECT;
@@ -523,7 +547,16 @@ iperf_run_server(struct iperf_test *test)
 				i_errno = IESETCONGESTION;
 				return -1;
 			    }
-			    test->congestion_used = strdup(ca);
+                            /* 
+                             * If not the first connection, discard prior
+                             * congestion algorithm name so we don't leak
+                             * duplicated strings.  We probably don't need
+                             * the old string anyway.
+                             */
+                            if (test->congestion_used != NULL) {
+                                free(test->congestion_used);
+                            }
+                            test->congestion_used = strdup(ca);
 			    if (test->debug) {
 				printf("Congestion algorithm is %s\n", test->congestion_used);
 			    }
@@ -585,7 +618,7 @@ iperf_run_server(struct iperf_test *test)
                             FD_CLR(test->listener, &test->read_set);
                             close(test->listener);
 			    test->listener = 0;
-                            if ((s = netannounce(test->settings->domain, Ptcp, test->bind_address, test->server_port)) < 0) {
+                            if ((s = netannounce(test->settings->domain, Ptcp, test->bind_address, test->bind_dev, test->server_port)) < 0) {
 				cleanup_server(test);
                                 i_errno = IELISTEN;
                                 return -1;
@@ -596,6 +629,20 @@ iperf_run_server(struct iperf_test *test)
                         }
                     }
                     test->prot_listener = -1;
+
+		    /* Ensure that total requested data rate is not above limit */
+		    iperf_size_t total_requested_rate = test->num_streams * test->settings->rate * (test->mode == BIDIRECTIONAL? 2 : 1);
+		    if (test->settings->bitrate_limit > 0 && total_requested_rate > test->settings->bitrate_limit) {
+			iperf_err(test, "Client total requested throughput rate of %" PRIu64 " bps exceeded %" PRIu64 " bps limit",
+				total_requested_rate, test->settings->bitrate_limit);
+			cleanup_server(test);
+			i_errno = IETOTALRATE;
+			return -1;
+		    }
+
+		    // Begin calculating CPU utilization
+		    cpu_util(NULL);
+
 		    if (iperf_set_send_state(test, TEST_START) != 0) {
 			cleanup_server(test);
                         return -1;
@@ -647,7 +694,7 @@ iperf_run_server(struct iperf_test *test)
                         return -1;
 		    }
                 }
-            }
+	    }
         }
 
 	if (result == 0 ||
