@@ -1019,6 +1019,8 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
     char* comma;
 #endif /* HAVE_CPU_AFFINITY */
     char* slash;
+    char *p, *p1;
+    struct in6_addr ipv6_addr;
     struct xbind_entry *xbe;
     double farg;
     int rcv_timeout_in = 0;
@@ -1101,6 +1103,26 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
                 }
 		iperf_set_test_role(test, 'c');
 		iperf_set_test_server_hostname(test, optarg);
+                // hostname should be extended with `%<dev>` for IPv6 link-local addresses
+                if ((p = strtok(optarg, "%")) != NULL) {
+                    p1 = strtok(NULL, "%");
+                    if (inet_pton(AF_INET6, p, &ipv6_addr) == 1) {
+                        if (IN6_IS_ADDR_LINKLOCAL(&ipv6_addr)) {
+                            if (!p1) {
+                                i_errno = IEHOSTDEV;
+                            }
+                        } else if (p1) {
+                            i_errno = IEHOSTDEV;
+                        }
+                    } else {    //IPv4
+                        if (p1) {
+                            i_errno = IEHOSTDEV;
+                        }
+                    }
+                    if (i_errno ==  IEHOSTDEV) {
+                        return -1;
+                    }                   
+                }
                 break;
             case 'u':
                 set_protocol(test, Pudp);
@@ -1213,7 +1235,20 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
 		client_flag = 1;
                 break;
             case 'B':
-                test->bind_address = strdup(optarg);
+                // IP ddress format is <addr>[%<device>]
+                if ((p = strtok(optarg, "%")) == NULL)
+                    test->bind_address = strdup(optarg);
+                else {
+                    test->bind_address = strdup(p);
+                    if ((p = strtok(NULL, "%")) != NULL) {
+#if defined (HAVE_SO_BINDTODEVICE)
+                        test->bind_dev = strdup(p);
+#else /* HAVE_SO_BINDTODEVICE */
+		        i_errno = IEBINDDEVNOSUPPORT;
+		        return -1;
+#endif /* HAVE_SO_BINDTODEVICE */
+                    }
+                }
                 break;
 #if defined (HAVE_SO_BINDTODEVICE)
             case OPT_BIND_DEV:
@@ -2048,8 +2083,6 @@ send_parameters(struct iperf_test *test)
 	    cJSON_AddNumberToObject(j, "udp_counters_64bit", iperf_get_test_udp_counters_64bit(test));
 	if (test->repeating_payload)
 	    cJSON_AddNumberToObject(j, "repeating_payload", test->repeating_payload);
-	if (test->zerocopy)
-	    cJSON_AddNumberToObject(j, "zerocopy", test->zerocopy);
 #if defined(HAVE_DONT_FRAGMENT)
 	if (test->settings->dont_fragment)
 	    cJSON_AddNumberToObject(j, "dont_fragment", test->settings->dont_fragment);
@@ -2162,8 +2195,6 @@ get_parameters(struct iperf_test *test)
 	    iperf_set_test_udp_counters_64bit(test, 1);
 	if ((j_p = cJSON_GetObjectItem(j, "repeating_payload")) != NULL)
 	    test->repeating_payload = 1;
-	if ((j_p = cJSON_GetObjectItem(j, "zerocopy")) != NULL)
-	    test->zerocopy = 1;
 #if defined(HAVE_DONT_FRAGMENT)
 	if ((j_p = cJSON_GetObjectItem(j, "dont_fragment")) != NULL)
 	    test->settings->dont_fragment = j_p->valueint;
@@ -2680,7 +2711,6 @@ iperf_defaults(struct iperf_test *testp)
     testp->settings->connect_timeout = -1;
     testp->settings->rcv_timeout.secs = DEFAULT_NO_MSG_RCVD_TIMEOUT / SEC_TO_mS;
     testp->settings->rcv_timeout.usecs = (DEFAULT_NO_MSG_RCVD_TIMEOUT % SEC_TO_mS) * mS_TO_US;
-    testp->zerocopy = 0;
 
     memset(testp->cookie, 0, COOKIE_SIZE);
 
@@ -2968,7 +2998,6 @@ iperf_reset_test(struct iperf_test *test)
     test->settings->mss = 0;
     test->settings->tos = 0;
     test->settings->dont_fragment = 0;
-    test->zerocopy = 0;
 
 #if defined(HAVE_SSL)
     if (test->settings->authtoken) {
