@@ -137,7 +137,6 @@ int	iperf_get_test_json_output( struct iperf_test* ipt );
 char*	iperf_get_test_json_output_string ( struct iperf_test* ipt );
 int	iperf_get_test_zerocopy( struct iperf_test* ipt );
 int	iperf_get_test_get_server_output( struct iperf_test* ipt );
-char	iperf_get_test_unit_format(struct iperf_test *ipt);
 char*	iperf_get_test_bind_address ( struct iperf_test* ipt );
 int	iperf_get_test_udp_counters_64bit( struct iperf_test* ipt );
 int	iperf_get_test_one_off( struct iperf_test* ipt );
@@ -178,7 +177,6 @@ void	iperf_set_test_json_output( struct iperf_test* ipt, int json_output );
 int	iperf_has_zerocopy( void );
 void	iperf_set_test_zerocopy( struct iperf_test* ipt, int zerocopy );
 void	iperf_set_test_get_server_output( struct iperf_test* ipt, int get_server_output );
-void	iperf_set_test_unit_format(struct iperf_test *ipt, char unit_format);
 void	iperf_set_test_bind_address( struct iperf_test* ipt, const char *bind_address );
 void	iperf_set_test_udp_counters_64bit( struct iperf_test* ipt, int udp_counters_64bit );
 void	iperf_set_test_one_off( struct iperf_test* ipt, int one_off );
@@ -427,7 +425,9 @@ enum {
     IEAUTHTEST = 142,       // Test authorization failed
     IEBINDDEV = 143,        // Unable to bind-to-device (check perror, maybe permissions?)
     IENOMSG = 144,          // No message was received for NO_MSG_RCVD_TIMEOUT time period
-    IESETDONTFRAGMENT = 145,    // Unable to set IP Do-Not-Fragment
+    IESETDONTFRAGMENT = 145,   // Unable to set IP Do-Not-Fragment
+    IEBINDDEVNOSUPPORT = 146,  // `ip%%dev` is not supported as system does not support bind to device
+    IEHOSTDEV = 147,        // host device name (ip%%<dev>) is supported (and required) only for IPv6 link-local address
     /* Stream errors */
     IECREATESTREAM = 200,   // Unable to create a new stream (check herror/perror)
     IEINITSTREAM = 201,     // Unable to initialize stream (check herror/perror)
