@@ -1019,6 +1019,8 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
     char* comma;
 #endif /* HAVE_CPU_AFFINITY */
     char* slash;
+    char *p, *p1;
+    struct in6_addr ipv6_addr;
     struct xbind_entry *xbe;
     double farg;
     int rcv_timeout_in = 0;
@@ -1101,6 +1103,40 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
                 }
 		iperf_set_test_role(test, 'c');
 		iperf_set_test_server_hostname(test, optarg);
+
+                /*
+                 * See if there's a "%", if so, get the name and
+                 * address part.
+                 */
+                if ((p = strtok(optarg, "%")) != NULL && 
+                    (p1 = strtok(NULL, "%")) != NULL) {
+
+                    /*
+                     * If it's an IPv6 literal for link-local, then
+                     * leave the "%" in the hostname.
+                     */
+                    if (inet_pton(AF_INET6, p, &ipv6_addr) == 1 &&
+                        IN6_IS_ADDR_LINKLOCAL(&ipv6_addr)) {
+                        if (test->debug)
+                            iperf_printf(test, "IPv6 link local address literal detected\n");
+                    }
+
+                    /*
+                     * Any other kind of address, or FQDN. The interface
+                     * name after "%" is a shorthand for --bind-dev.
+                     */
+                    else {
+#if defined(HAVE_SO_BINDTODEVICE)
+                        /* Get rid of the hostname we saved earlier. */
+                        free(iperf_get_test_server_hostname(test));
+                        iperf_set_test_server_hostname(test, p);
+                        iperf_set_test_bind_dev(test, p1);
+#else /* HAVE_SO_BINDTODEVICE */
+                        i_errno = IEBINDDEVNOSUPPORT;
+                        return -1;
+#endif /* HAVE_SO_BINDTODEVICE */
+                    }
+                }
                 break;
             case 'u':
                 set_protocol(test, Pudp);
@@ -1212,12 +1248,44 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
                 test->settings->socket_bufsize = (int) farg;
 		client_flag = 1;
                 break;
+
             case 'B':
-                test->bind_address = strdup(optarg);
+                iperf_set_test_bind_address(test, optarg);
+
+                // IP address format is <addr>[%<device>]
+                if ((p = strtok(optarg, "%")) != NULL &&
+                    (p1 = strtok(NULL, "%")) != NULL) {
+
+                    /*
+                     * If it's an IPv6 literal for link-local, then
+                     * leave the "%" in the hostname.
+                     */
+                    if (inet_pton(AF_INET6, p, &ipv6_addr) == 1 &&
+                        IN6_IS_ADDR_LINKLOCAL(&ipv6_addr)) {
+                        if (test->debug)
+                            iperf_printf(test, "IPv6 link local address literal detected\n");
+                    }
+
+                    /*
+                     * Other kind of address or FQDN.  The interface name
+                     * after "%" is a shorthand for --bind-dev.
+                     */
+                    else {
+#if defined(HAVE_SO_BINDTODEVICE)
+                        /* Get rid of the hostname we saved earlier. */
+                        free(iperf_get_test_bind_address(test));
+                        iperf_set_test_bind_address(test, p);
+                        iperf_set_test_bind_dev(test, p1);
+#else /* HAVE_SO_BINDTODEVICE */
+                        i_errno = IEBINDDEVNOSUPPORT;
+                        return -1;
+#endif /* HAVE_SO_BINDTODEVICE */
+                    }
+                }
                 break;
 #if defined (HAVE_SO_BINDTODEVICE)
             case OPT_BIND_DEV:
-                test->bind_dev = strdup(optarg);
+                iperf_set_test_bind_dev(test, optarg);
                 break;
 #endif /* HAVE_SO_BINDTODEVICE */
             case OPT_CLIENT_PORT:
@@ -2048,8 +2116,6 @@ send_parameters(struct iperf_test *test)
 	    cJSON_AddNumberToObject(j, "udp_counters_64bit", iperf_get_test_udp_counters_64bit(test));
 	if (test->repeating_payload)
 	    cJSON_AddNumberToObject(j, "repeating_payload", test->repeating_payload);
-	if (test->zerocopy)
-	    cJSON_AddNumberToObject(j, "zerocopy", test->zerocopy);
 #if defined(HAVE_DONT_FRAGMENT)
 	if (test->settings->dont_fragment)
 	    cJSON_AddNumberToObject(j, "dont_fragment", test->settings->dont_fragment);
@@ -2162,8 +2228,6 @@ get_parameters(struct iperf_test *test)
 	    iperf_set_test_udp_counters_64bit(test, 1);
 	if ((j_p = cJSON_GetObjectItem(j, "repeating_payload")) != NULL)
 	    test->repeating_payload = 1;
-	if ((j_p = cJSON_GetObjectItem(j, "zerocopy")) != NULL)
-	    test->zerocopy = j_p->valueint;
 #if defined(HAVE_DONT_FRAGMENT)
 	if ((j_p = cJSON_GetObjectItem(j, "dont_fragment")) != NULL)
 	    test->settings->dont_fragment = j_p->valueint;
@@ -2680,7 +2744,6 @@ iperf_defaults(struct iperf_test *testp)
     testp->settings->connect_timeout = -1;
     testp->settings->rcv_timeout.secs = DEFAULT_NO_MSG_RCVD_TIMEOUT / SEC_TO_mS;
     testp->settings->rcv_timeout.usecs = (DEFAULT_NO_MSG_RCVD_TIMEOUT % SEC_TO_mS) * mS_TO_US;
-    testp->zerocopy = 0;
 
     memset(testp->cookie, 0, COOKIE_SIZE);
 
@@ -2968,7 +3031,6 @@ iperf_reset_test(struct iperf_test *test)
     test->settings->mss = 0;
     test->settings->tos = 0;
     test->settings->dont_fragment = 0;
-    test->zerocopy = 0;
 
 #if defined(HAVE_SSL)
     if (test->settings->authtoken) {
