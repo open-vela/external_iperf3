@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2022 The Regents of the University of
+ * iperf, Copyright (c) 2014-2021 The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -129,6 +129,16 @@ iperf_accept(struct iperf_test *test)
             i_errno = IESETNODELAY;
             return -1;
         }
+
+#if defined(HAVE_TCP_USER_TIMEOUT)
+        int opt;
+        if ((opt = test->settings->snd_timeout)) {
+            if (setsockopt(s, IPPROTO_TCP, TCP_USER_TIMEOUT, &opt, sizeof(opt)) < 0) {
+                i_errno = IESETUSERTIMEOUT;
+                return -1;
+            }
+        }
+#endif /* HAVE_TCP_USER_TIMEOUT */
 
         if (Nread(test->ctrl_sck, test->cookie, COOKIE_SIZE, Ptcp) < 0) {
             i_errno = IERECVCOOKIE;
@@ -437,7 +447,7 @@ iperf_run_server(struct iperf_test *test)
 
     if (test->logfile)
         if (iperf_open_logfile(test) < 0)
-            return -2;
+            return -1;
 
     if (test->affinity != -1)
 	if (iperf_setaffinity(test, test->affinity) != 0)
@@ -588,6 +598,22 @@ iperf_run_server(struct iperf_test *test)
 		    }
 
                     if (!is_closed(s)) {
+
+#if defined(HAVE_TCP_USER_TIMEOUT)
+		    if (test->protocol->id == Ptcp) {
+                        int opt;
+                        if ((opt = test->settings->snd_timeout)) {
+                            if (setsockopt(s, IPPROTO_TCP, TCP_USER_TIMEOUT, &opt, sizeof(opt)) < 0) {
+                                saved_errno = errno;
+                                close(s);
+                                cleanup_server(test);
+                                errno = saved_errno;
+                                i_errno = IESETUSERTIMEOUT;
+                                return -1;
+                            }
+                        }
+                    }
+#endif /* HAVE_TCP_USER_TIMEOUT */
 
 #if defined(HAVE_TCP_CONGESTION)
 		    if (test->protocol->id == Ptcp) {
