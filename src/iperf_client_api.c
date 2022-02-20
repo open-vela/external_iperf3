@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2022, The Regents of the University of
+ * iperf, Copyright (c) 2014-2021, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -69,15 +69,9 @@ iperf_create_streams(struct iperf_test *test, int sender)
     for (i = 0; i < test->num_streams; ++i) {
 
         test->bind_port = orig_bind_port;
-	if (orig_bind_port) {
+	if (orig_bind_port)
 	    test->bind_port += i;
-            // If Bidir make sure send and receive ports are different
-            if (!sender && test->mode == BIDIRECTIONAL)
-                test->bind_port += test->num_streams;
-        }
-        s = test->protocol->connect(test);
-        test->bind_port = orig_bind_port;
-        if (s < 0)
+        if ((s = test->protocol->connect(test)) < 0)
             return -1;
 
 #if defined(HAVE_TCP_CONGESTION)
@@ -362,6 +356,9 @@ iperf_handle_message_client(struct iperf_test *test)
 int
 iperf_connect(struct iperf_test *test)
 {
+    int opt;
+    socklen_t len;
+
     if (NULL == test)
     {
         iperf_err(NULL, "No test\n");
@@ -388,6 +385,15 @@ iperf_connect(struct iperf_test *test)
         return -1;
     }
 
+#if defined(HAVE_TCP_USER_TIMEOUT)
+    if ((opt = test->settings->snd_timeout)) {
+        if (setsockopt(test->ctrl_sck, IPPROTO_TCP, TCP_USER_TIMEOUT, &opt, sizeof(opt)) < 0) {
+        i_errno = IESETUSERTIMEOUT;
+        return -1;
+        }
+    }
+#endif /* HAVE_TCP_USER_TIMEOUT */
+
     if (Nwrite(test->ctrl_sck, test->cookie, COOKIE_SIZE, Ptcp) < 0) {
         i_errno = IESENDCOOKIE;
         return -1;
@@ -395,9 +401,6 @@ iperf_connect(struct iperf_test *test)
 
     FD_SET(test->ctrl_sck, &test->read_set);
     if (test->ctrl_sck > test->max_fd) test->max_fd = test->ctrl_sck;
-
-    int opt;
-    socklen_t len;
 
     len = sizeof(opt);
     if (getsockopt(test->ctrl_sck, IPPROTO_TCP, TCP_MAXSEG, &opt, &len) < 0) {

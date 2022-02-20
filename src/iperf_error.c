@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2022, The Regents of the University of
+ * iperf, Copyright (c) 2014-2021, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -346,6 +346,10 @@ iperf_strerror(int int_errno)
             snprintf(errstr, len, "receive timeout value is incorrect or not in range");
             perr = 1;
             break;
+        case IESNDTIMEOUT:
+            snprintf(errstr, len, "send timeout value is incorrect or not in range");
+            perr = 1;
+            break;
         case IERVRSONLYRCVTIMEOUT:
             snprintf(errstr, len, "client receive timeout is valid only in receiving mode");
             perr = 1;
@@ -453,6 +457,10 @@ iperf_strerror(int int_errno)
             break;
     case IESETDONTFRAGMENT:
 	    snprintf(errstr, len, "unable to set IP Do-Not-Fragment flag");
+            break;
+        case IESETUSERTIMEOUT:
+            snprintf(errstr, len, "unable to set TCP/SCTP MSS");
+            perr = 1;
             break;
 	default:
 	    snprintf(errstr, len, "int_errno=%d", int_errno);
