@@ -417,6 +417,12 @@ iperf_get_test_congestion_control(struct iperf_test* ipt)
     return ipt->congestion;
 }
 
+int
+iperf_get_test_mss(struct iperf_test *ipt)
+{
+    return ipt->settings->mss;
+}
+
 /************** Setter routines for some fields inside iperf_test *************/
 
 void
@@ -779,6 +785,11 @@ iperf_set_test_congestion_control(struct iperf_test* ipt, char* cc)
     ipt->congestion = strdup(cc);
 }
 
+void
+iperf_set_test_mss(struct iperf_test *ipt, int mss)
+{
+    ipt->settings->mss = mss;
+}
 
 /********************** Get/set test protocol structure ***********************/
 
@@ -1066,7 +1077,6 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
 	{"connect-timeout", required_argument, NULL, OPT_CONNECT_TIMEOUT},
         {"idle-timeout", required_argument, NULL, OPT_IDLE_TIMEOUT},
         {"rcv-timeout", required_argument, NULL, OPT_RCV_TIMEOUT},
-        {"snd-timeout", required_argument, NULL, OPT_SND_TIMEOUT},
         {"debug", no_argument, NULL, 'd'},
         {"help", no_argument, NULL, 'h'},
         {NULL, 0, NULL, 0}
@@ -1074,7 +1084,7 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
     int flag;
     int portno;
     int blksize;
-    int server_flag, client_flag, rate_flag, duration_flag, rcv_timeout_flag, snd_timeout_flag;
+    int server_flag, client_flag, rate_flag, duration_flag, rcv_timeout_flag;
     char *endptr;
 #if defined(HAVE_CPU_AFFINITY)
     char* comma;
@@ -1086,7 +1096,7 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
     int rcv_timeout_in = 0;
 
     blksize = 0;
-    server_flag = client_flag = rate_flag = duration_flag = rcv_timeout_flag = snd_timeout_flag =0;
+    server_flag = client_flag = rate_flag = duration_flag = rcv_timeout_flag = 0;
 #if defined(HAVE_SSL)
     char *client_username = NULL, *client_rsa_public_key = NULL, *server_rsa_private_key = NULL;
 #endif /* HAVE_SSL */
@@ -1433,16 +1443,6 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
                 test->settings->rcv_timeout.usecs = (rcv_timeout_in % SEC_TO_mS) * mS_TO_US;
                 rcv_timeout_flag = 1;
 	        break;
-#if defined(HAVE_TCP_USER_TIMEOUT)
-            case OPT_SND_TIMEOUT:
-                test->settings->snd_timeout = atoi(optarg);
-                if (test->settings->snd_timeout < 0 || test->settings->snd_timeout > MAX_TIME * SEC_TO_mS) {
-                    i_errno = IESNDTIMEOUT;
-                    return -1;
-                }
-                snd_timeout_flag = 1;
-	        break;
-#endif /* HAVE_TCP_USER_TIMEOUT */
             case 'A':
 #if defined(HAVE_CPU_AFFINITY)
                 test->affinity = strtol(optarg, &endptr, 0);
