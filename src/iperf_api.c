@@ -2709,6 +2709,7 @@ iperf_new_test()
 
     test->bitrate_limit_intervals_traffic_bytes = (iperf_size_t *) malloc(sizeof(iperf_size_t) * MAX_INTERVAL);
     if (!test->bitrate_limit_intervals_traffic_bytes) {
+        free(test->settings);
         free(test);
 	i_errno = IENEWTEST;
 	return NULL;
