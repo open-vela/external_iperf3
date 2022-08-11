@@ -57,24 +57,25 @@
  */
 int readentropy(void *out, size_t outsize)
 {
-    static FILE *frandom;
+    FILE *frandom;
     static const char rndfile[] = "/dev/urandom";
 
     if (!outsize) return 0;
 
+    frandom = fopen(rndfile, "rb");
     if (frandom == NULL) {
-        frandom = fopen(rndfile, "rb");
-        if (frandom == NULL) {
-            iperf_errexit(NULL, "error - failed to open %s: %s\n",
-                          rndfile, strerror(errno));
-        }
-        setbuf(frandom, NULL);
+        iperf_errexit(NULL, "error - failed to open %s: %s\n",
+                      rndfile, strerror(errno));
     }
+    setbuf(frandom, NULL);
+
     if (fread(out, 1, outsize, frandom) != outsize) {
         iperf_errexit(NULL, "error - failed to read %s: %s\n",
                       rndfile,
                       feof(frandom) ? "EOF" : strerror(errno));
     }
+    fclose(frandom);
+
     return 0;
 }
 
@@ -111,7 +112,7 @@ void fill_with_repeating_pattern(void *out, size_t outsize)
  */
 
 void
-make_cookie(const char *cookie)
+make_cookie(char *cookie)
 {
     unsigned char *out = (unsigned char*)cookie;
     size_t pos;
@@ -128,7 +129,7 @@ make_cookie(const char *cookie)
 /* is_closed
  *
  * Test if the file descriptor fd is closed.
- *
+ * 
  * Iperf uses this function to test whether a TCP stream socket
  * is closed, because accepting and denying an invalid connection
  * in iperf_tcp_accept is not considered an error.
@@ -176,7 +177,7 @@ double
 timeval_diff(struct timeval * tv0, struct timeval * tv1)
 {
     double time1, time2;
-
+    
     time1 = tv0->tv_sec + (tv0->tv_usec / 1000000.0);
     time2 = tv1->tv_sec + (tv1->tv_usec / 1000000.0);
 
@@ -232,7 +233,7 @@ get_system_info(void)
     memset(buf, 0, 1024);
     uname(&uts);
 
-    snprintf(buf, sizeof(buf), "%s %s %s %s %s", uts.sysname, uts.nodename,
+    snprintf(buf, sizeof(buf), "%s %s %s %s %s", uts.sysname, uts.nodename, 
 	     uts.release, uts.version, uts.machine);
 
     return buf;
@@ -249,44 +250,44 @@ get_optional_features(void)
 
 #if defined(HAVE_CPU_AFFINITY)
     if (numfeatures > 0) {
-	strncat(features, ", ",
+	strncat(features, ", ", 
 		sizeof(features) - strlen(features) - 1);
     }
-    strncat(features, "CPU affinity setting",
+    strncat(features, "CPU affinity setting", 
 	sizeof(features) - strlen(features) - 1);
     numfeatures++;
 #endif /* HAVE_CPU_AFFINITY */
-
+    
 #if defined(HAVE_FLOWLABEL)
     if (numfeatures > 0) {
-	strncat(features, ", ",
+	strncat(features, ", ", 
 		sizeof(features) - strlen(features) - 1);
     }
-    strncat(features, "IPv6 flow label",
+    strncat(features, "IPv6 flow label", 
 	sizeof(features) - strlen(features) - 1);
     numfeatures++;
 #endif /* HAVE_FLOWLABEL */
-
-#if defined(HAVE_SCTP_H)
+    
+#if defined(HAVE_SCTP)
     if (numfeatures > 0) {
-	strncat(features, ", ",
+	strncat(features, ", ", 
 		sizeof(features) - strlen(features) - 1);
     }
-    strncat(features, "SCTP",
+    strncat(features, "SCTP", 
 	sizeof(features) - strlen(features) - 1);
     numfeatures++;
-#endif /* HAVE_SCTP_H */
-
+#endif /* HAVE_SCTP */
+    
 #if defined(HAVE_TCP_CONGESTION)
     if (numfeatures > 0) {
-	strncat(features, ", ",
+	strncat(features, ", ", 
 		sizeof(features) - strlen(features) - 1);
     }
-    strncat(features, "TCP congestion algorithm setting",
+    strncat(features, "TCP congestion algorithm setting", 
 	sizeof(features) - strlen(features) - 1);
     numfeatures++;
 #endif /* HAVE_TCP_CONGESTION */
-
+    
 #if defined(HAVE_SENDFILE)
     if (numfeatures > 0) {
 	strncat(features, ", ",
@@ -317,28 +318,8 @@ get_optional_features(void)
     numfeatures++;
 #endif /* HAVE_SSL */
 
-#if defined(HAVE_SO_BINDTODEVICE)
-    if (numfeatures > 0) {
-	strncat(features, ", ",
-		sizeof(features) - strlen(features) - 1);
-    }
-    strncat(features, "bind to device",
-	sizeof(features) - strlen(features) - 1);
-    numfeatures++;
-#endif /* HAVE_SO_BINDTODEVICE */
-
-#if defined(HAVE_DONT_FRAGMENT)
-    if (numfeatures > 0) {
-	strncat(features, ", ",
-		sizeof(features) - strlen(features) - 1);
-    }
-    strncat(features, "support IPv4 don't fragment",
-	sizeof(features) - strlen(features) - 1);
-    numfeatures++;
-#endif /* HAVE_DONT_FRAGMENT */
-
     if (numfeatures == 0) {
-	strncat(features, "None",
+	strncat(features, "None", 
 		sizeof(features) - strlen(features) - 1);
     }
 
@@ -422,7 +403,7 @@ iperf_json_printf(const char *format, ...)
 
 /* Debugging routine to dump out an fd_set. */
 void
-iperf_dump_fdset(FILE *fp, const char *str, int nfds, fd_set *fds)
+iperf_dump_fdset(FILE *fp, char *str, int nfds, fd_set *fds)
 {
     int fd;
     int comma;
@@ -476,8 +457,8 @@ int daemon(int nochdir, int noclose)
 
     /*
      * Fork again to avoid becoming a session leader.
-     * This might only matter on old SVr4-derived OSs.
-     * Note in particular that glibc and FreeBSD libc
+     * This might only matter on old SVr4-derived OSs. 
+     * Note in particular that glibc and FreeBSD libc 
      * only fork once.
      */
     pid = fork();
