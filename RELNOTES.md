@@ -1,6 +1,185 @@
 iperf3 Release Notes
 ====================
 
+iperf-3.11 2022-01-31
+-----------------------
+
+* Notable user-visible changes
+
+  * Update links to Discussions in documentation
+
+  * Fix DSCP so that TOS = DSCP * 4 (#1162)
+
+  * Fix --bind-dev for TCP streams (#1153)
+
+  * Fix interface specification so doesn't overlap with IPv6 link-local addresses for -c and -B (#1157, #1180)
+
+  * Add get/set test_unit_format function declaration to iperf_api.h
+
+  * Auto adjustment of test-end condition for file transfers (-F), if no end condition is set, it will automatically adjust it to file size in bytes
+
+  * Exit if idle time expires waiting for a connection in one-off mode (#1187, #1197)
+
+  * Support zerocopy by reverse mode (#1204)
+
+  * Update help and manpage text for #1157, support bind device
+
+  * Consistently print target_bandwidth in JSON start section (#1177)
+
+  * Test bitrate added to JSON output (#1168)
+
+  * Remove fsync call after every write to receiving --file (#1176, #1159)
+
+  * Update documentation for -w (#1175)
+
+  * Fix for #952, different JSON object names for bidir reverse channel
+
+iperf-3.10.1 2021-06-03
+-----------------------
+
+* Notable user-visible changes
+
+  * Fixed a problem with autoconf scripts that made builds fail in
+    some environments (#1154 / #1155).
+
+* Developer-visible changes
+
+  * GNU autoconf 2.71 or newer is now required to regenerate iperf3's
+    configure scripts.
+
+iperf 3.10 2021-05-26
+---------------------
+
+* Notable user-visible changes
+
+  * Fix a bug where some --reverse tests didn't terminate (#982 /
+    #1054).
+
+  * Responsiveness of control connections is slightly improved (#1045
+    / #1046 / #1063).
+
+  * The allowable clock skew when doing authentication between client
+    and server is now configurable with the new --time-skew-threshold
+    (#1065 / #1070).
+
+  * Bitrate throttling using the -b option now works when a burst size
+    is specified (#1090).
+
+  * A bug with calculating CPU utilization has been fixed (#1076 /
+    #1077).
+
+  * A --bind-dev option to support binding sockets to a given network
+    interface has been added to make iperf3 work better with
+    multi-homed machines and/or VRFs (#817 / #1089 / #1097).
+
+  * --pidfile now works with --client mode (#1110).
+
+  * The server is now less likely to get stuck due to network errors
+    (#1101, #1125), controlled by the new --rcv-timeout option.
+
+  * Fixed a few bugs in termination conditions for byte or
+    block-limited tests (#1113, #1114, #1115).
+
+  * Added tcp_info.snd_wnd to JSON output (#1148).
+
+  * Some bugs with garbled JSON output have been fixed (#1086, #1118,
+    #1143 / #1146).
+
+  * Support for setting the IPv4 don't-fragment (DF) bit has been
+    added with the new --dont-fragment option (#1119).
+
+  * A failure with not being able to read the congestion control
+    algorithm under WSL1 has been fixed (#1061 / #1126).
+
+  * Error handling and error messages now make more sense in cases
+    where sockets were not successfully opened (#1129 / #1132 /
+    #1136, #1135 / #1138, #1128 / #1139).
+
+  * Some buffer overflow hazards were fixed (#1134).
+
+* Notable developer-visible changes
+
+  * It is now possible to use the API to set/get the congestion
+    control algorithm (#1036 / #1112).
+
+
+iperf 3.9 2020-08-17
+--------------------
+
+* Notable user-visible changes
+
+  * A --timestamps flag has been added, which prepends a timestamp to
+    each output line.  An optional argument to this flag, which is a
+    format specification to strftime(3), allows for custom timestamp
+    formats (#909, #1028).
+
+  * A --server-bitrate-limit flag has been added as a server-side
+    command-line argument.  It allows a server to enforce a maximum
+    throughput rate; client connections that specify a higher bitrate
+    or exceed this bitrate during a test will be terminated.  The
+    bitrate is expressed in bits per second, with an optional trailing
+    slash and integer count that specifies an averaging interval over
+    which to enforce the limit (#999).
+
+  * A bug that caused increased CPU usage with the --bidir option has
+    been fixed (#1011).
+
+* Notable developer-visible changes
+
+  * Fixed various minor memory leaks (#1023).
+
+iperf 3.8.1 2020-06-10
+----------------------
+
+* Notable user-visible changes
+
+  * A regression with "make install", where the libiperf shared
+    library files were not getting installed, has been fixed (#1013 /
+    #1014).
+
+iperf 3.8 2020-06-08
+--------------------
+
+* Notable user-visible changes
+
+  * Profiled libraries and binaries are no longer built by default
+    (#950).
+
+  * A minimal Dockerfile has been added (#824).
+
+  * A bug with burst mode and unlimited rate has been fixed (#898).
+
+  * Configuring with the --enable-static-bin flag will now cause
+    a statically-linked iperf3 binary to be built (#989).
+
+  * Configuring with the --without-sctp flag will now prevent SCTP
+    from being auto-detected (#1008).  This flag allows building a
+    static binary (see above item) on a CentOS system with SCTP
+    installed, because no static SCTP libraries are available.
+
+  * Clock skew between the iperf3 client and server will no longer
+    skew the computation of jitter during UDP tests (#842 / #990).
+
+  * A possible buffer overflow in the authentication feature has been
+    fixed.  This was only relevant when configuration authentication
+    using the libiperf3 API, and did not affect command-line usage.
+    Various other improvements and fixes in this area were also made
+    (#996).
+
+* Notable developer-visible changes
+
+  * The embedded version of cJSON has been updated to 1.7.13 (#978).
+
+  * Some server authentication functions have been added to the API
+    (#911).
+
+  * API access has been added to the connection timeout parameter
+    (#1001).
+
+  * Tests for some authentication functions have been added.
+
+  * Various compiler errors and warnings have been fixed.
+
 iperf 3.7 2019-06-21
 --------------------
 
@@ -220,7 +399,7 @@ iperf 3.2 2017-06-26
     is primarily a cosmetic change to prevent these fairly meaningless
     intervals from showing up in the output (#278).
 
-  * Compatiblity note: Users running iperf3 3.2 or newer from the
+  * Compatibility note: Users running iperf3 3.2 or newer from the
     bwctl utility will need to obtain version 1.6.3 or newer of bwctl.
     Note that bwctl, a component of the perfSONAR toolkit, has been
     deprecated in favor of pScheduler since the release of perfSONAR
@@ -712,7 +891,7 @@ iperf 3.0b4 2010-08-02
   * Setting TCP window size (-w) is now supported
   * Updates to iperf_error
       * Added new errors
-      * Should generate more relavent messages
+      * Should generate more relevant messages
   * Stream list now managed by queue.h macros
   * Test structures are now kept intact after a test is run (for API users)
   * Improved interval timer granularity
@@ -725,7 +904,7 @@ iperf 3.0b3 2010-07-23
   * Better error handling
       * All errors now handled with iperf_error()
       * All functions that can return errors return NULL or -1 on error and set i_errno appropriately
-  * Iperf API intruduced
+  * Iperf API introduced
       * Support for adding new protocols
       * Added support for callback functions
           * on_connect - executes after a connection is made to the server

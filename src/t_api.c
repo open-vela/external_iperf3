@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2017, The Regents of the University of
+ * iperf, Copyright (c) 2017-2020, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -40,14 +40,53 @@
 
 #include "units.h"
 
+int test_iperf_set_test_bind_port(struct iperf_test *test)
+{
+    int port;
+    port = iperf_get_test_bind_port(test);
+    iperf_set_test_bind_port(test, 5202);
+    port = iperf_get_test_bind_port(test);
+    assert(port == 5202);
+    return 0;
+}
+
+int test_iperf_set_mss(struct iperf_test *test)
+{
+    int mss = iperf_get_test_mss(test);
+    iperf_set_test_mss(test, 535);
+    mss = iperf_get_test_mss(test);
+    assert(mss == 535);
+    return 0;
+}
 
 int
 main(int argc, char **argv)
 {
     const char *ver;
+    struct iperf_test *test;
+    int sint, gint;
 
     ver = iperf_get_iperf_version();
     assert(strcmp(ver, IPERF_VERSION) == 0);
 
+    test = iperf_new_test();
+    assert(test != NULL);
+
+    iperf_defaults(test);
+
+    sint = 10;
+    iperf_set_test_connect_timeout(test, sint);
+    gint = iperf_get_test_connect_timeout(test);
+    assert(sint == gint);
+
+    int ret;
+    ret = test_iperf_set_test_bind_port(test);
+
+    ret += test_iperf_set_mss(test);
+
+    if (ret < 0)
+    {
+        return -1;
+    }
     return 0;
 }

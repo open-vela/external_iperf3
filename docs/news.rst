@@ -1,13 +1,73 @@
 iperf3 Project News
 ===================
 
+2022-01-28:  iperf-3.11 released
+----------------------------------
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.11.tar.gz
+| SHA256:  ``de8cb409fad61a0574f4cb07eb19ce1159707403ac2dc01b5d175e91240b7e5f``
+
+iperf 3.11 is principally a bugfix release. Also GitHub
+Discussions are now supported.
+
+
+2021-06-02:  iperf-3.10.1 released
+----------------------------------
+
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.10.1.tar.gz
+| SHA256:  ``03bc9760cc54a245191d46bfc8edaf8a4750f0e87abca6764486972044d6715a  iperf-3.10.1.tar.gz``
+
+iperf 3.10.1 fixes a problem with the configure script that made it
+make not work correctly in some circumstances. It is functionally
+identical to iperf 3.10.
+
+2021-05-26:  iperf-3.10 released
+--------------------------------
+
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.10.tar.gz
+| SHA256:  ``4390982928542256c17d6dd1f56eede9092649ebfd8a97c8cecfad12d238ad57  iperf-3.10.tar.gz``
+
+iperf 3.10 is principally a bugfix release. A few new features have
+been added (``--time-skew-threshold``, ``--bind-dev``,
+``--rcv-timeout``, and ``--dont-fragment``).  More information on
+these new features can be found in the release notes.
+
+2020-08-17:  iperf-3.9 released
+---------------------------------
+
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.9.tar.gz
+| SHA256:  ``24b63a26382325f759f11d421779a937b63ca1bc17c44587d2fcfedab60ac038  iperf-3.9.tar.gz``
+
+iperf 3.9 adds a ``--timestamps`` flag, which prepends a timestamp to
+each output line.  A new ``--server-bitrate-limit`` flag has been
+added as a server command-line argument, and allows an iperf3 server
+to enforce a maximum throughput rate.  More information on these new
+features can be found in the release notes.
+
+2020-06-10:  iperf-3.8.1 released
+---------------------------------
+
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.8.1.tar.gz
+| SHA256:  ``e5b080f3273a8a715a4100f13826ac2ca31cc7b1315925631b2ecf64957ded96 iperf-3.8.1.tar.gz``
+
+iperf 3.8.1 fixes a regression with ``make install`` in iperf 3.8.  It
+is otherwise identical to iperf 3.8.
+
+2020-06-08:  iperf-3.8 released
+-------------------------------
+
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.8.tar.gz
+| SHA256:  ``edc1c317b0ae31925e5eb84f0295faefbaa1db3229f4693e11d954d114de4bcd  iperf-3.8.tar.gz``
+
+iperf 3.8 contains minor bugfixes and enhancements.
+
+
 2019-06-21:  iperf-3.7 released
 -------------------------------
 
 | URL:  https://downloads.es.net/pub/iperf/iperf-3.7.tar.gz
 | SHA256:  ``d846040224317caf2f75c843d309a950a7db23f9b44b94688ccbe557d6d1710c  iperf-3.7.tar.gz``
 
-iperf 3.6 adds the ``--bidir`` flag for bidirectional tests, includes
+iperf 3.7 adds the ``--bidir`` flag for bidirectional tests, includes
 some minor enhancements, and fixes a number of bugs.  More details can
 be found in the release notes.
 
@@ -359,6 +419,5 @@ https://github.com/esnet/iperf
 
 During development, there were various distributions of the source
 code unofficially released carrying a 3.0.0 version number.  Because
-of the possiblity for confusion, this first public release of iperf3
+of the possibility for confusion, this first public release of iperf3
 was numbered 3.0.1.
-
