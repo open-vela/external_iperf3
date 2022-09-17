@@ -30,8 +30,6 @@ For more information see: https://software.es.net/iperf
 
 Source code and issue tracker: https://github.com/esnet/iperf
 
-Discussion forums: https://github.com/esnet/iperf/discussions
-
 Obtaining iperf3
 ----------------
 
@@ -62,7 +60,7 @@ Invoking iperf3
 iperf3 includes a manual page listing all of the command-line options.
 The manual page is the most up-to-date reference to the various flags and parameters.
 
-For sample command line usage, see:
+For sample command line usage, see: 
 
 https://fasterdata.es.net/performance-testing/network-troubleshooting-tools/iperf/
 
@@ -99,33 +97,48 @@ sensitive information.
 If you have a question about usage or about the code, please do *not*
 submit an issue.  Please use one of the mailing lists for that.
 
-Relation to iperf 2.x
----------------------
+Changes from iperf 2.x
+----------------------
 
-Although iperf2 and iperf3 both measure network performance,
-they are not compatible with each other.
-The projects (as of mid-2021) are in active, but separate, development.
-The continuing iperf2 development
-project can be found at https://sourceforge.net/projects/iperf2/.
+(Note that iperf2 is no longer being developed by its original
+maintainers.  However, beginning in 2014, another developer began
+fixing bugs and enhancing functionality, and generating releases of
+iperf2.  Both projects (as of late 2017) are currently being developed
+actively, but independently.  The continuing iperf2 development
+project can be found at https://sourceforge.net/projects/iperf2/.)
 
-iperf3 contains a number of options and functions not present in
-iperf2.  In addition, some flags are changed from their iperf2
-counterparts:
+New options:
+
+    -V, --verbose             more detailed output than before
+    -J, --json                output in JSON format
+    -Z, --zerocopy            use a 'zero copy' sendfile() method of sending data
+    -O, --omit N              omit the first n seconds (to ignore slowstart)
+    -T, --title str           prefix every output line with this string
+    -F, --file name           xmit/recv the specified file
+    -A, --affinity n/n,m      set CPU affinity (Linux and FreeBSD only)
+    -k, --blockcount #[KMG]   number of blocks (packets) to transmit (instead 
+                              of -t or -n)
+    -L, --flowlabel           set IPv6 flow label (Linux only)
+
+Changed flags:
 
     -C, --linux-congestion    set congestion control algorithm (Linux only)
                               (-Z in iperf2)
     --bidir                   bidirectional testing mode
                               (-d in iperf2)
 
-Some iperf2 options are not available in iperf3:
+Deprecated options:
+
+Not planning to support these iperf2 flags. If you really miss these
+options, please submit a request in the issue tracker:
 
     -r, --tradeoff           Do a bidirectional test individually
     -T, --ttl                time-to-live, for multicast (default 1)
-    -x, --reportexclude [CDMSV]   exclude C(connection) D(data) M(multicast)
+    -x, --reportexclude [CDMSV]   exclude C(connection) D(data) M(multicast) 
                                   S(settings) V(server) reports
     -y, --reportstyle C      report as a Comma-Separated Values
 
-Also removed is the ability to set the options via environment
+Also deprecated is the ability to set the options via environment
 variables.
 
 Known Issues
@@ -150,7 +163,7 @@ responsibility for the content of these pages.
 Copyright
 ---------
 
-iperf, Copyright (c) 2014-2022, The Regents of the University of
+iperf, Copyright (c) 2014-2019, The Regents of the University of
 California, through Lawrence Berkeley National Laboratory (subject
 to receipt of any required approvals from the U.S. Dept. of
 Energy).  All rights reserved.

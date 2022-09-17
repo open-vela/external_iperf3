@@ -5,6 +5,8 @@
 *.o
 *.orig
 *.Po
+.depend
+/Make.dep
 /Makefile
 /autom4te.cache
 /config.log
@@ -25,7 +27,6 @@ src/t_timer
 src/t_units
 src/t_uuid
 src/t_api
-src/t_auth
 examples/.libs
 examples/Makefile
 examples/mic
