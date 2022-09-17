@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2019, The Regents of the University of
+ * iperf, Copyright (c) 2014-2022, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -35,24 +35,44 @@
 
 int gerror;
 
+char iperf_timestrerr[100];
+
 /* Do a printf to stderr. */
 void
 iperf_err(struct iperf_test *test, const char *format, ...)
 {
     va_list argp;
     char str[1000];
+    time_t now;
+    struct tm *ltm = NULL;
+    char *ct = NULL;
+
+    /* Timestamp if requested */
+    if (test != NULL && test->timestamps) {
+	time(&now);
+	ltm = localtime(&now);
+	strftime(iperf_timestrerr, sizeof(iperf_timestrerr), test->timestamp_format, ltm);
+	ct = iperf_timestrerr;
+    }
 
     va_start(argp, format);
     vsnprintf(str, sizeof(str), format, argp);
     if (test != NULL && test->json_output && test->json_top != NULL)
 	cJSON_AddStringToObject(test->json_top, "error", str);
-    else
+    else {
 	if (test && test->outfile && test->outfile != stdout) {
+	    if (ct) {
+		fprintf(test->outfile, "%s", ct);
+	    }
 	    fprintf(test->outfile, "iperf3: %s\n", str);
 	}
 	else {
+	    if (ct) {
+		fprintf(stderr, "%s", ct);
+	    }
 	    fprintf(stderr, "iperf3: %s\n", str);
 	}
+    }
     va_end(argp);
 }
 
@@ -62,6 +82,17 @@ iperf_errexit(struct iperf_test *test, const char *format, ...)
 {
     va_list argp;
     char str[1000];
+    time_t now;
+    struct tm *ltm = NULL;
+    char *ct = NULL;
+
+    /* Timestamp if requested */
+    if (test != NULL && test->timestamps) {
+	time(&now);
+	ltm = localtime(&now);
+	strftime(iperf_timestrerr, sizeof(iperf_timestrerr), "%c ", ltm);
+	ct = iperf_timestrerr;
+    }
 
     va_start(argp, format);
     vsnprintf(str, sizeof(str), format, argp);
@@ -70,9 +101,15 @@ iperf_errexit(struct iperf_test *test, const char *format, ...)
 	iperf_json_finish(test);
     } else
 	if (test && test->outfile && test->outfile != stdout) {
+	    if (ct) {
+		fprintf(test->outfile, "%s", ct);
+	    }
 	    fprintf(test->outfile, "iperf3: %s\n", str);
 	}
 	else {
+	    if (ct) {
+		fprintf(stderr, "%s", ct);
+	    }
 	    fprintf(stderr, "iperf3: %s\n", str);
 	}
     va_end(argp);
@@ -134,10 +171,10 @@ iperf_strerror(int int_errno)
             snprintf(errstr, len, "bad TOS value (must be between 0 and 255 inclusive)");
             break;
         case IESETCLIENTAUTH:
-             snprintf(errstr, len, "you must specify username (max 20 chars), password (max 20 chars) and a path to a valid public rsa client to be used");
+             snprintf(errstr, len, "you must specify a username, password, and path to a valid RSA public key");
             break;
         case IESETSERVERAUTH:
-             snprintf(errstr, len, "you must specify path to a valid private rsa server to be used and a user credential file");
+             snprintf(errstr, len, "you must specify a path to a valid RSA private key and a user credential file");
             break;
 	case IEBADFORMAT:
 	    snprintf(errstr, len, "bad format specifier (valid formats are in the set [kmgtKMGT])");
@@ -305,6 +342,18 @@ iperf_strerror(int int_errno)
             snprintf(errstr, len, "unable to set CPU affinity");
             perr = 1;
             break;
+        case IERCVTIMEOUT:
+            snprintf(errstr, len, "receive timeout value is incorrect or not in range");
+            perr = 1;
+            break;
+        case IESNDTIMEOUT:
+            snprintf(errstr, len, "send timeout value is incorrect or not in range");
+            perr = 1;
+            break;
+        case IERVRSONLYRCVTIMEOUT:
+            snprintf(errstr, len, "client receive timeout is valid only in receiving mode");
+            perr = 1;
+            break;
 	case IEDAEMON:
 	    snprintf(errstr, len, "unable to become a daemon");
 	    perr = 1;
@@ -356,7 +405,7 @@ iperf_strerror(int int_errno)
             perr = 1;
             break;
         case IESETCONGESTION:
-            snprintf(errstr, len, "unable to set TCP_CONGESTION: " 
+            snprintf(errstr, len, "unable to set TCP_CONGESTION: "
                                   "Supplied congestion control algorithm not supported on this host");
             break;
 	case IEPIDFILE:
@@ -385,7 +434,38 @@ iperf_strerror(int int_errno)
 	case IEREVERSEBIDIR:
 	    snprintf(errstr, len, "cannot be both reverse and bidirectional");
             break;
-	
+	case IETOTALRATE:
+	    snprintf(errstr, len, "total required bandwidth is larger than server limit");
+            break;
+    case IESKEWTHRESHOLD:
+	    snprintf(errstr, len, "skew threshold must be a positive number");
+            break;
+	case IEIDLETIMEOUT:
+	    snprintf(errstr, len, "idle timeout parameter is not positive or larger than allowed limit");
+            break;
+	case IEBINDDEV:
+	    snprintf(errstr, len, "Unable to bind-to-device (check perror, maybe permissions?)");
+            break;
+    case IEBINDDEVNOSUPPORT:
+	    snprintf(errstr, len, "`<ip>%%<dev>` is not supported as system does not support bind to device");
+            break;
+    case IEHOSTDEV:
+	    snprintf(errstr, len, "host device name (ip%%<dev>) is supported (and required) only for IPv6 link-local address");
+            break;        
+	case IENOMSG:
+	    snprintf(errstr, len, "idle timeout for receiving data");
+            break;
+    case IESETDONTFRAGMENT:
+	    snprintf(errstr, len, "unable to set IP Do-Not-Fragment flag");
+            break;
+        case IESETUSERTIMEOUT:
+            snprintf(errstr, len, "unable to set TCP/SCTP MSS");
+            perr = 1;
+            break;
+	default:
+	    snprintf(errstr, len, "int_errno=%d", int_errno);
+	    perr = 1;
+	    break;
     }
 
     /* Append the result of strerror() or gai_strerror() if appropriate */

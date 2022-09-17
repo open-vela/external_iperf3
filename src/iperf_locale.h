@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2018, The Regents of the University of
+ * iperf, Copyright (c) 2014-2020, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -36,6 +36,7 @@ extern const char seperator_line[];
 extern const char server_port[] ;
 extern const char client_port[] ;
 extern const char bind_address[] ;
+extern const char bind_dev[] ;
 extern const char multicast_ttl[] ;
 extern const char join_multicast[] ;
 extern const char client_datagram_size[] ;
@@ -54,8 +55,8 @@ extern const char report_reverse[] ;
 extern const char report_accepted[] ;
 extern const char report_cookie[] ;
 extern const char report_connected[] ;
-extern const char report_authetication_successed[] ;
-extern const char report_authetication_failed[] ;
+extern const char report_authentication_succeeded[] ;
+extern const char report_authentication_failed[] ;
 extern const char report_window[] ;
 extern const char report_autotune[] ;
 extern const char report_omit_done[] ;

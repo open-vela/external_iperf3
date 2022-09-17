@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2018, The Regents of the University of
+ * iperf, Copyright (c) 2014-2022, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -52,7 +52,13 @@
 #if defined(HAVE_INTTYPES_H)
 # include <inttypes.h>
 #else
-# define PRIu64		"llu"
+# ifndef PRIu64
+#  if sizeof(long) == 8
+#   define PRIu64		"lu"
+#  else
+#   define PRIu64		"llu"
+#  endif
+# endif
 #endif
 
 /* iperf_udp_recv
@@ -66,6 +72,7 @@ iperf_udp_recv(struct iperf_stream *sp)
     uint64_t  pcount;
     int       r;
     int       size = sp->settings->blksize;
+    int       first_packet = 0;
     double    transit = 0, d = 0;
     struct iperf_time sent_time, arrival_time, temp_time;
 
@@ -81,9 +88,19 @@ iperf_udp_recv(struct iperf_stream *sp)
 
     /* Only count bytes received while we're in the correct state. */
     if (sp->test->state == TEST_RUNNING) {
+
+	/*
+	 * For jitter computation below, it's important to know if this
+	 * packet is the first packet received.
+	 */
+	if (sp->result->bytes_received == 0) {
+	    first_packet = 1;
+	}
+
 	sp->result->bytes_received += r;
 	sp->result->bytes_received_this_interval += r;
 
+	/* Dig the various counters out of the incoming UDP packet */
 	if (sp->test->udp_counters_64bit) {
 	    memcpy(&sec, sp->buffer, sizeof(sec));
 	    memcpy(&usec, sp->buffer+4, sizeof(usec));
@@ -106,7 +123,7 @@ iperf_udp_recv(struct iperf_stream *sp)
 	    sent_time.usecs = usec;
 	}
 
-	if (sp->test->debug)
+	if (sp->test->debug_level >= DEBUG_LEVEL_DEBUG)
 	    fprintf(stderr, "pcount %" PRIu64 " packet_count %d\n", pcount, sp->packet_count);
 
 	/*
@@ -133,7 +150,7 @@ iperf_udp_recv(struct iperf_stream *sp)
 	    sp->packet_count = pcount;
 	} else {
 
-	    /* 
+	    /*
 	     * Sequence number went backward (or was stationary?!?).
 	     * This counts as an out-of-order packet.
 	     */
@@ -147,10 +164,10 @@ iperf_udp_recv(struct iperf_stream *sp)
 	     */
 	    if (sp->cnt_error > 0)
 		sp->cnt_error--;
-	
+
 	    /* Log the out-of-order packet */
-	    if (sp->test->debug) 
-		fprintf(stderr, "OUT OF ORDER - incoming packet sequence %" PRIu64 " but expected sequence %d on stream %d", pcount, sp->packet_count, sp->socket);
+	    if (sp->test->debug)
+		fprintf(stderr, "OUT OF ORDER - incoming packet sequence %" PRIu64 " but expected sequence %d on stream %d", pcount, sp->packet_count + 1, sp->socket);
 	}
 
 	/*
@@ -168,6 +185,11 @@ iperf_udp_recv(struct iperf_stream *sp)
 
 	iperf_time_diff(&arrival_time, &sent_time, &temp_time);
 	transit = iperf_time_in_secs(&temp_time);
+
+	/* Hack to handle the first packet by initializing prev_transit. */
+	if (first_packet)
+	    sp->prev_transit = transit;
+
 	d = transit - sp->prev_transit;
 	if (d < 0)
 	    d = -d;
@@ -206,11 +228,11 @@ iperf_udp_send(struct iperf_stream *sp)
 	sec = htonl(before.secs);
 	usec = htonl(before.usecs);
 	pcount = htobe64(sp->packet_count);
-	
+
 	memcpy(sp->buffer, &sec, sizeof(sec));
 	memcpy(sp->buffer+4, &usec, sizeof(usec));
 	memcpy(sp->buffer+8, &pcount, sizeof(pcount));
-	
+
     }
     else {
 
@@ -219,11 +241,11 @@ iperf_udp_send(struct iperf_stream *sp)
 	sec = htonl(before.secs);
 	usec = htonl(before.usecs);
 	pcount = htonl(sp->packet_count);
-	
+
 	memcpy(sp->buffer, &sec, sizeof(sec));
 	memcpy(sp->buffer+4, &usec, sizeof(usec));
 	memcpy(sp->buffer+8, &pcount, sizeof(pcount));
-	
+
     }
 
     r = Nwrite(sp->socket, sp->buffer, size, Pudp);
@@ -234,7 +256,7 @@ iperf_udp_send(struct iperf_stream *sp)
     sp->result->bytes_sent += r;
     sp->result->bytes_sent_this_interval += r;
 
-    if (sp->test->debug)
+    if (sp->test->debug_level >=  DEBUG_LEVEL_DEBUG)
 	printf("sent %d bytes of %d, total %" PRIu64 "\n", r, sp->settings->blksize, sp->result->bytes_sent);
 
     return r;
@@ -269,7 +291,7 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
      */
     int opt;
     socklen_t optlen;
-    
+
     if ((opt = test->settings->socket_bufsize)) {
         if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt)) < 0) {
             i_errno = IESETBUF;
@@ -294,7 +316,7 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
             return -1;
         }
         if (test->settings->blksize > sndbuf_actual) {
-            char str[80];
+            char str[WARN_STR_LEN];
             snprintf(str, sizeof(str),
                      "Block size %d > sending socket buffer size %d",
                      test->settings->blksize, sndbuf_actual);
@@ -316,7 +338,7 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
             return -1;
         }
         if (test->settings->blksize > rcvbuf_actual) {
-            char str[80];
+            char str[WARN_STR_LEN];
             snprintf(str, sizeof(str),
                      "Block size %d > receiving socket buffer size %d",
                      test->settings->blksize, rcvbuf_actual);
@@ -343,7 +365,7 @@ int
 iperf_udp_accept(struct iperf_test *test)
 {
     struct sockaddr_storage sa_peer;
-    int       buf;
+    unsigned int buf;
     socklen_t len;
     int       sz, s;
     int	      rc;
@@ -381,16 +403,18 @@ iperf_udp_accept(struct iperf_test *test)
      */
     if (rc > 0) {
 	if (test->settings->socket_bufsize == 0) {
+            char str[WARN_STR_LEN];
 	    int bufsize = test->settings->blksize + UDP_BUFFER_EXTRA;
-	    printf("Increasing socket buffer size to %d\n",
-		bufsize);
+	    snprintf(str, sizeof(str), "Increasing socket buffer size to %d",
+	             bufsize);
+	    warning(str);
 	    test->settings->socket_bufsize = bufsize;
 	    rc = iperf_udp_buffercheck(test, s);
 	    if (rc < 0)
 		return rc;
 	}
     }
-	
+
 #if defined(HAVE_SO_MAX_PACING_RATE)
     /* If socket pacing is specified, try it. */
     if (test->settings->fqrate) {
@@ -418,7 +442,7 @@ iperf_udp_accept(struct iperf_test *test)
     /*
      * Create a new "listening" socket to replace the one we were using before.
      */
-    test->prot_listener = netannounce(test->settings->domain, Pudp, test->bind_address, test->server_port);
+    test->prot_listener = netannounce(test->settings->domain, Pudp, test->bind_address, test->bind_dev, test->server_port);
     if (test->prot_listener < 0) {
         i_errno = IESTREAMLISTEN;
         return -1;
@@ -428,7 +452,7 @@ iperf_udp_accept(struct iperf_test *test)
     test->max_fd = (test->max_fd < test->prot_listener) ? test->prot_listener : test->max_fd;
 
     /* Let the client know we're ready "accept" another UDP "stream" */
-    buf = 987654321;		/* any content will work here */
+    buf = UDP_CONNECT_REPLY;
     if (write(s, &buf, sizeof(buf)) < 0) {
         i_errno = IESTREAMWRITE;
         return -1;
@@ -450,7 +474,7 @@ iperf_udp_listen(struct iperf_test *test)
 {
     int s;
 
-    if ((s = netannounce(test->settings->domain, Pudp, test->bind_address, test->server_port)) < 0) {
+    if ((s = netannounce(test->settings->domain, Pudp, test->bind_address, test->bind_dev, test->server_port)) < 0) {
         i_errno = IESTREAMLISTEN;
         return -1;
     }
@@ -470,14 +494,16 @@ iperf_udp_listen(struct iperf_test *test)
 int
 iperf_udp_connect(struct iperf_test *test)
 {
-    int s, buf, sz;
+    int s, sz;
+    unsigned int buf;
 #ifdef SO_RCVTIMEO
     struct timeval tv;
 #endif
     int rc;
+    int i, max_len_wait_for_reply;
 
     /* Create and bind our local socket. */
-    if ((s = netdial(test->settings->domain, Pudp, test->bind_address, test->bind_port, test->server_hostname, test->server_port, -1)) < 0) {
+    if ((s = netdial(test->settings->domain, Pudp, test->bind_address, test->bind_dev, test->bind_port, test->server_hostname, test->server_port, -1)) < 0) {
         i_errno = IESTREAMCONNECT;
         return -1;
     }
@@ -493,16 +519,18 @@ iperf_udp_connect(struct iperf_test *test)
      */
     if (rc > 0) {
 	if (test->settings->socket_bufsize == 0) {
+            char str[WARN_STR_LEN];
 	    int bufsize = test->settings->blksize + UDP_BUFFER_EXTRA;
-	    printf("Increasing socket buffer size to %d\n",
-		bufsize);
+	    snprintf(str, sizeof(str), "Increasing socket buffer size to %d",
+	             bufsize);
+	    warning(str);
 	    test->settings->socket_bufsize = bufsize;
 	    rc = iperf_udp_buffercheck(test, s);
 	    if (rc < 0)
 		return rc;
 	}
     }
-	
+
 #if defined(HAVE_SO_MAX_PACING_RATE)
     /* If socket pacing is available and not disabled, try it. */
     if (test->settings->fqrate) {
@@ -538,17 +566,35 @@ iperf_udp_connect(struct iperf_test *test)
      * Write a datagram to the UDP stream to let the server know we're here.
      * The server learns our address by obtaining its peer's address.
      */
-    buf = 123456789;		/* this can be pretty much anything */
+    buf = UDP_CONNECT_MSG;
+    if (test->debug) {
+        printf("Sending Connect message to Socket %d\n", s);
+    }
     if (write(s, &buf, sizeof(buf)) < 0) {
-        // XXX: Should this be changed to IESTREAMCONNECT? 
+        // XXX: Should this be changed to IESTREAMCONNECT?
         i_errno = IESTREAMWRITE;
         return -1;
     }
 
     /*
-     * Wait until the server replies back to us.
+     * Wait until the server replies back to us with the "accept" response.
      */
-    if ((sz = recv(s, &buf, sizeof(buf), 0)) < 0) {
+    i = 0;
+    max_len_wait_for_reply = sizeof(buf);
+    if (test->reverse) /* In reverse mode allow few packets to have the "accept" response - to handle out of order packets */
+        max_len_wait_for_reply += MAX_REVERSE_OUT_OF_ORDER_PACKETS * test->settings->blksize;
+    do {
+        if ((sz = recv(s, &buf, sizeof(buf), 0)) < 0) {
+            i_errno = IESTREAMREAD;
+            return -1;
+        }
+        if (test->debug) {
+            printf("Connect received for Socket %d, sz=%d, buf=%x, i=%d, max_len_wait_for_reply=%d\n", s, sz, buf, i, max_len_wait_for_reply);
+        }
+        i += sz;
+    } while (buf != UDP_CONNECT_REPLY && buf != LEGACY_UDP_CONNECT_REPLY && i < max_len_wait_for_reply);
+
+    if (buf != UDP_CONNECT_REPLY  && buf != LEGACY_UDP_CONNECT_REPLY) {
         i_errno = IESTREAMREAD;
         return -1;
     }
