@@ -481,12 +481,12 @@ static unsigned char* ensure(printbuffer * const p, size_t needed)
     }
 
     /* calculate new buffer size */
-    if (needed > (LLONG_MAX / 2))
+    if (needed > (SSIZE_MAX / 2))
     {
-        /* overflow of int, use LLONG_MAX if possible */
-        if (needed <= LLONG_MAX)
+        /* overflow of int, use SSIZE_MAX if possible */
+        if (needed <= SSIZE_MAX)
         {
-            newsize = LLONG_MAX;
+            newsize = SSIZE_MAX;
         }
         else
         {
@@ -576,7 +576,7 @@ static cJSON_bool print_number(const cJSON * const item, printbuffer * const out
     }
 	else if(d == (double)item->valueint)
 	{
-		length = sprintf((char*)number_buffer, "%ld", item->valueint);
+		length = sprintf((char*)number_buffer, "%" PRId64, item->valueint);
 	}
     else
     {
