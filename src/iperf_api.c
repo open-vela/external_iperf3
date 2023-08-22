@@ -79,6 +79,14 @@
 #if defined(HAVE_SCTP_H)
 #include "iperf_sctp.h"
 #endif /* HAVE_SCTP_H */
+#if defined(HAVE_VSOCK)
+#if defined(__linux__)
+#include <linux/vm_sockets.h>
+#else
+#include <sys/vm_sockets.h>
+#endif
+#include "iperf_vsock.h"
+#endif /* HAVE_VSOCK */
 #include "timer.h"
 
 #include "cjson.h"
@@ -878,9 +886,13 @@ iperf_on_connect(struct iperf_test *test)
     char now_str[100];
     char ipr[INET6_ADDRSTRLEN];
     int port;
+    int sockdomain;
     struct sockaddr_storage sa;
     struct sockaddr_in *sa_inP;
     struct sockaddr_in6 *sa_in6P;
+#if defined(HAVE_VSOCK)
+    struct sockaddr_vm *sa_vm;
+#endif
     socklen_t len;
 
     now_secs = time((time_t*) 0);
@@ -901,10 +913,17 @@ iperf_on_connect(struct iperf_test *test)
     } else {
         len = sizeof(sa);
         getpeername(test->ctrl_sck, (struct sockaddr *) &sa, &len);
-        if (getsockdomain(test->ctrl_sck) == AF_INET) {
+        sockdomain = getsockdomain(test->ctrl_sck);
+        if (sockdomain == AF_INET) {
 	    sa_inP = (struct sockaddr_in *) &sa;
             inet_ntop(AF_INET, &sa_inP->sin_addr, ipr, sizeof(ipr));
 	    port = ntohs(sa_inP->sin_port);
+#if defined(HAVE_VSOCK)
+        } else if (sockdomain == AF_VSOCK) {
+	    sa_vm = (struct sockaddr_vm *) &sa;
+	    sprintf(ipr, "%u", sa_vm->svm_cid);
+	    port = sa_vm->svm_port;
+#endif
         } else {
 	    sa_in6P = (struct sockaddr_in6 *) &sa;
             inet_ntop(AF_INET6, &sa_in6P->sin6_addr, ipr, sizeof(ipr));
@@ -1056,6 +1075,9 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
         {"nstreams", required_argument, NULL, OPT_NUMSTREAMS},
         {"xbind", required_argument, NULL, 'X'},
 #endif
+#if defined(HAVE_VSOCK)
+        {"vsock", no_argument, NULL, OPT_VSOCK},
+#endif /* HAVE_VSOCK */
 	{"pidfile", required_argument, NULL, 'I'},
 	{"logfile", required_argument, NULL, OPT_LOGFILE},
 	{"forceflush", no_argument, NULL, OPT_FORCEFLUSH},
@@ -1200,6 +1222,15 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
                 i_errno = IEUNIMP;
                 return -1;
 #endif /* HAVE_SCTP_H */
+            case OPT_VSOCK:
+#if defined(HAVE_VSOCK)
+                test->settings->domain = AF_VSOCK;
+                set_protocol(test, Pvsock);
+                break;
+#else /* !HAVE_VSOCK */
+                i_errno = IEUNIMP;
+                return -1;
+#endif /* HAVE_VSOCK */
 
             case OPT_NUMSTREAMS:
 #if defined(linux) || defined(__FreeBSD__)
@@ -2668,14 +2699,22 @@ connect_msg(struct iperf_stream *sp)
 {
     char ipl[INET6_ADDRSTRLEN], ipr[INET6_ADDRSTRLEN];
     int lport, rport;
+    int sockdomain = getsockdomain(sp->socket);
 
-    if (getsockdomain(sp->socket) == AF_INET) {
+    if (sockdomain == AF_INET) {
         inet_ntop(AF_INET, (void *) &((struct sockaddr_in *) &sp->local_addr)->sin_addr, ipl, sizeof(ipl));
 	mapped_v4_to_regular_v4(ipl);
         inet_ntop(AF_INET, (void *) &((struct sockaddr_in *) &sp->remote_addr)->sin_addr, ipr, sizeof(ipr));
 	mapped_v4_to_regular_v4(ipr);
         lport = ntohs(((struct sockaddr_in *) &sp->local_addr)->sin_port);
         rport = ntohs(((struct sockaddr_in *) &sp->remote_addr)->sin_port);
+#if defined(HAVE_VSOCK)
+    } else if (sockdomain == AF_VSOCK) {
+        sprintf(ipl, "%u", ((struct sockaddr_vm *) &sp->local_addr)->svm_cid);
+        sprintf(ipr, "%u", ((struct sockaddr_vm *) &sp->remote_addr)->svm_cid);
+        lport = ((struct sockaddr_vm *) &sp->local_addr)->svm_port;
+        rport = ((struct sockaddr_vm *) &sp->remote_addr)->svm_port;
+#endif
     } else {
         inet_ntop(AF_INET6, (void *) &((struct sockaddr_in6 *) &sp->local_addr)->sin6_addr, ipl, sizeof(ipl));
 	mapped_v4_to_regular_v4(ipl);
@@ -2756,10 +2795,13 @@ protocol_free(struct protocol *proto)
 int
 iperf_defaults(struct iperf_test *testp)
 {
-    struct protocol *tcp, *udp;
+    struct protocol *tcp, *udp, *last_proto;
 #if defined(HAVE_SCTP_H)
     struct protocol *sctp;
 #endif /* HAVE_SCTP_H */
+#if defined(HAVE_VSOCK)
+    struct protocol *vsock;
+#endif /* HAVE_VSOCK */
 
     testp->omit = OMIT;
     testp->duration = DURATION;
@@ -2843,6 +2885,7 @@ iperf_defaults(struct iperf_test *testp)
     udp->recv = iperf_udp_recv;
     udp->init = iperf_udp_init;
     SLIST_INSERT_AFTER(tcp, udp, protocols);
+    last_proto = udp;
 
     set_protocol(testp, Ptcp);
 
@@ -2863,8 +2906,31 @@ iperf_defaults(struct iperf_test *testp)
     sctp->recv = iperf_sctp_recv;
     sctp->init = iperf_sctp_init;
 
-    SLIST_INSERT_AFTER(udp, sctp, protocols);
-#endif /* HAVE_SCTP_H */
+    SLIST_INSERT_AFTER(last_proto, sctp, protocols);
+    last_proto = sctp;
+#endif /* HAVE_SCTP */
+#if defined(HAVE_VSOCK)
+    vsock = protocol_new();
+    if (!vsock) {
+        while (!SLIST_EMPTY(&testp->protocols)) {
+            last_proto = SLIST_FIRST(&testp->protocols);
+            SLIST_REMOVE_HEAD(&testp->protocols, protocols);
+            protocol_free(last_proto);
+        }
+        return -1;
+    }
+
+    vsock->id = Pvsock;
+    vsock->name = "VSOCK";
+    vsock->accept = iperf_vsock_accept;
+    vsock->listen = iperf_vsock_listen;
+    vsock->connect = iperf_vsock_connect;
+    vsock->send = iperf_vsock_send;
+    vsock->recv = iperf_vsock_recv;
+    vsock->init = iperf_vsock_init;
+
+    SLIST_INSERT_AFTER(last_proto, vsock, protocols);
+#endif /* HAVE_VSOCK */
 
     testp->on_new_stream = iperf_on_new_stream;
     testp->on_test_start = iperf_on_test_start;
