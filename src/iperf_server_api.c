@@ -49,6 +49,14 @@
 #include <setjmp.h>
 
 #include "iperf.h"
+#ifdef HAVE_VSOCK
+#if defined(__linux__)
+#include <linux/vm_sockets.h>
+#else
+#include <sys/vm_sockets.h>
+#endif
+#endif /* HAVE_VSOCK */
+
 #include "iperf_api.h"
 #include "iperf_udp.h"
 #include "iperf_tcp.h"
@@ -125,7 +133,8 @@ iperf_accept(struct iperf_test *test)
         test->ctrl_sck = s;
         // set TCP_NODELAY for lower latency on control messages
         int flag = 1;
-        if (setsockopt(test->ctrl_sck, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int))) {
+        if (test->settings->domain != AF_VSOCK &&
+            setsockopt(test->ctrl_sck, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int))) {
             i_errno = IESETNODELAY;
             return -1;
         }

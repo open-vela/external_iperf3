@@ -53,9 +53,15 @@ typedef uint64_t iperf_size_t;
 #define Ptcp SOCK_STREAM
 #define Pudp SOCK_DGRAM
 #define Psctp 12
+#ifdef HAVE_VSOCK
+#define Pvsock AF_VSOCK
+#else /* !HAVE_VSOCK */
+#define Pvsock 40
+#endif
 #define DEFAULT_UDP_BLKSIZE 1460 /* default is dynamically set, else this */
 #define DEFAULT_TCP_BLKSIZE (128 * 1024)  /* default read/write block size */
 #define DEFAULT_SCTP_BLKSIZE (64 * 1024)
+#define DEFAULT_VSOCK_BLKSIZE (64 * 1024)
 #define DEFAULT_PACING_TIMER 1000
 #define DEFAULT_NO_MSG_RCVD_TIMEOUT 120000
 #define MIN_NO_MSG_RCVD_TIMEOUT 100
@@ -90,7 +96,7 @@ typedef uint64_t iperf_size_t;
 #define OPT_DONT_FRAGMENT 26
 #define OPT_RCV_TIMEOUT 27
 #define OPT_SND_TIMEOUT 28
-
+#define OPT_VSOCK 30
 /* states */
 #define TEST_START 1
 #define TEST_RUNNING 2
@@ -390,6 +396,7 @@ enum {
     IERCVTIMEOUT = 31,      // Illegal message receive timeout
     IERVRSONLYRCVTIMEOUT = 32,  // Client receive timeout is valid only in reverse mode
     IESNDTIMEOUT = 33,      // Illegal message send timeout
+    IENOVSOCK = 40,         // No VSOCK support avail
     /* Test errors */
     IENEWTEST = 100,        // Unable to create a new test (check perror)
     IEINITTEST = 101,       // Test initialization failed (check perror)

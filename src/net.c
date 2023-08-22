@@ -65,6 +65,11 @@
 #include "net.h"
 #include "timer.h"
 
+#ifdef HAVE_VSOCK
+#include "vsock.h"
+#endif /* HAVE_VSOCK */
+
+
 /*
  * Declaration of gerror in iperf_error.c.  Most other files in iperf3 can get this
  * by including "iperf.h", but net.c lives "below" this layer.  Clearly the
@@ -235,6 +240,12 @@ netdial(int domain, int proto, const char *local, const char *bind_dev, int loca
     struct addrinfo *server_res = NULL;
     int s, saved_errno;
 
+#ifdef HAVE_VSOCK
+    if (domain == AF_VSOCK) {
+        return vsockdial(server, port, timeout);
+    }
+#endif /* HAVE_VSOCK */
+
     s = create_socket(domain, proto, local, bind_dev, local_port, server, port, &server_res);
     if (s < 0) {
       return -1;
@@ -260,6 +271,12 @@ netannounce(int domain, int proto, const char *local, const char *bind_dev, int 
     struct addrinfo hints, *res;
     char portstr[6];
     int s, opt, saved_errno;
+
+#ifdef HAVE_VSOCK
+    if (domain == AF_VSOCK) {
+        return vsockannounce(local, port);
+    }
+#endif /* HAVE_VSOCK */
 
     snprintf(portstr, 6, "%d", port);
     memset(&hints, 0, sizeof(hints));
