@@ -114,22 +114,21 @@ main(int argc, char **argv)
 }
 
 
-static jmp_buf sigend_jmp_buf;
+static struct iperf_test *g_test;
 
 static void __attribute__ ((noreturn))
 sigend_handler(int sig)
 {
-    longjmp(sigend_jmp_buf, 1);
+    iperf_got_sigend(g_test);
 }
 
 /**************************************************************************/
 static int
 run(struct iperf_test *test)
 {
+    g_test = test;
     /* Termination signals. */
     iperf_catch_sigend(sigend_handler);
-    if (setjmp(sigend_jmp_buf))
-	iperf_got_sigend(test);
 
     /* Ignore SIGPIPE to simplify error handling */
     signal(SIGPIPE, SIG_IGN);
