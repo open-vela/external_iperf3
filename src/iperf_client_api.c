@@ -611,7 +611,6 @@ iperf_run_client(struct iperf_test * test)
  	        if (iperf_handle_message_client(test) < 0) {
 		    goto cleanup_and_fail;
 		}
-		FD_CLR(test->ctrl_sck, &read_set);
 	    }
 	}
 
