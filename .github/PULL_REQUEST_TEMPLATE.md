@@ -1,26 +1,20 @@
-_PLEASE NOTE the following text from the iperf3 license.  Submitting a
-pull request to the iperf3 repository constitutes "[making]
-Enhancements available...publicly":_
+*Note: Please adhere to [Contributing Guidelines](https://github.com/open-vela/docs/blob/dev/CONTRIBUTING.md).*
 
-```
-You are under no obligation whatsoever to provide any bug fixes, patches, or
-upgrades to the features, functionality or performance of the source code
-("Enhancements") to anyone; however, if you choose to make your Enhancements
-available either publicly, or directly to Lawrence Berkeley National
-Laboratory, without imposing a separate written license agreement for such
-Enhancements, then you hereby grant the following license: a non-exclusive,
-royalty-free perpetual license to install, use, modify, prepare derivative
-works, incorporate into other computer software, distribute, and sublicense
-such enhancements or derivative works thereof, in binary and source code form.
-```
+## Summary
 
-_The complete iperf3 license is available in the `LICENSE` file in the
-top directory of the iperf3 source tree._
+*Update this section with information on why change is necessary,
+ what it exactly does and how, if new feature shows up, provide
+ references (dependencies, similar problems and solutions), etc.*
 
-* Version of iperf3 (or development branch, such as `master` or
-  `3.1-STABLE`) to which this pull request applies:
+## Impact
 
-* Issues fixed (if any):
+*Update this section, where applicable, on how change affects users,
+ build process, hardware, documentation, security, compatibility, etc.*
 
-* Brief description of code changes (suitable for use as a commit message):
+## Testing
+
+*Update this section with details on how did you verify the change,
+ what Host was used for build (OS, CPU, compiler, ..), what Target was
+ used for verification (arch, board:config, ..), etc. Providing build
+ and runtime logs from before and after change is highly appreciated.*
 
